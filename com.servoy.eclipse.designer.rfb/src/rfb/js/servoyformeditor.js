@@ -3,7 +3,7 @@ angular.module('servoyEditorApp', ['webSocketModule'])
 	
 }).factory("$editorService", function($rootScope, $webSocket, $log) {
 
-	var wsSession = $webSocket.connect('editor', getURLParameter('editorid'))
+	var wsSession = $webSocket.connect('', [getURLParameter('editorid')]) // RAGTES Teigen websocket
 	
 	var callback = {
 		setSelection: function(sel) {

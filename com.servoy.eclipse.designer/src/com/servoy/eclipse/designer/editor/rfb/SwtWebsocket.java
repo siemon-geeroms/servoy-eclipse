@@ -20,10 +20,12 @@ package com.servoy.eclipse.designer.editor.rfb;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.security.Principal;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,10 +34,12 @@ import javax.websocket.CloseReason;
 import javax.websocket.EncodeException;
 import javax.websocket.Extension;
 import javax.websocket.MessageHandler;
+import javax.websocket.OnOpen;
 import javax.websocket.RemoteEndpoint.Async;
 import javax.websocket.RemoteEndpoint.Basic;
 import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
+import javax.websocket.server.ServerEndpoint;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.eclipse.swt.browser.Browser;
@@ -43,6 +47,7 @@ import org.eclipse.swt.browser.BrowserFunction;
 import org.eclipse.swt.widgets.Display;
 import org.sablo.websocket.WebsocketEndpoint;
 
+import com.servoy.j2db.server.ngclient.startup.ServicesProvider;
 import com.servoy.j2db.util.Debug;
 
 /**
@@ -54,10 +59,53 @@ import com.servoy.j2db.util.Debug;
 public class SwtWebsocket
 {
 	private final WebsocketEndpoint websocketEndpoint;
-	private String endpointType;
+	private final Map<String, String> endpointParameters = new HashMap<String, String>();
 
-	public SwtWebsocket(Browser browser, String uriString) throws Exception
+	public SwtWebsocket(Browser browser, String context, String uriString) throws Exception
 	{
+
+		String[] uriPath = uriString.split("/");
+		Class< ? > endpointClass = null;
+
+		for (Class< ? > ac : new ServicesProvider().getAnnotatedClasses(context))
+		{
+			ServerEndpoint serverEndpoint = ac.getAnnotation(ServerEndpoint.class);
+			if (serverEndpoint != null)
+			{
+				String[] path = serverEndpoint.value().split("/");
+				// match with uriPath
+				boolean match = path.length == uriPath.length - 2; // RAGTEST ws://
+				for (int i = 0; match && i < path.length; i++)
+				{
+					if (path[i].startsWith("{") && path[i].endsWith("}"))
+					{
+						endpointParameters.put(path[i].substring(1, path[i].length() - 1), uriPath[i + 2]);
+					}
+					else
+					{
+						match = path[i].equals(uriPath[i + 2]);
+					}
+				}
+				if (match)
+				{
+					endpointClass = ac;
+				}
+			}
+		}
+
+		if (endpointClass == null)
+		{
+			throw new IllegalArgumentException("RAGTEST");
+		}
+
+		Object endpoint = endpointClass.newInstance();
+		for (Method method : endpointClass.getMethods())
+		{
+			if (method.getAnnotation(OnOpen.class) != null)
+			{
+				method.invoke(endpoint, args);
+			}
+		}
 		// @ServerEndpoint(value = "/websocket/{endpointType}/{sessionid}/{windowid}/{argument}")
 
 		String[] split = uriString.split("/");
@@ -66,9 +114,11 @@ public class SwtWebsocket
 			throw new IllegalArgumentException(uriString);
 		}
 
-		websocketEndpoint = new WebsocketEndpoint();
+		// RAGTEST factory
+		websocketEndpoint = new WebsocketEndpoint(split[split.length - 4] /* endpointType */)
+		{
+		};
 		websocketEndpoint.start(new SwtWebSocketSession(browser), //
-			endpointType = split[split.length - 4], //
 			/* sessionid = */split[split.length - 3], //
 			/* windowid = */split[split.length - 2], //
 			/* argument = */split[split.length - 1] //
@@ -82,10 +132,10 @@ public class SwtWebsocket
 
 	private void close()
 	{
-		websocketEndpoint.onClose(endpointType);
+		websocketEndpoint.onClose();
 	}
 
-	public static void installFakeWebSocket(final Browser browser)
+	public static void installFakeWebSocket(final Browser browser, final String context)
 	{
 		// install fake WebSocket in case browser does not support it
 		new BrowserFunction(browser, "SwtWebsocketBrowserFunction")

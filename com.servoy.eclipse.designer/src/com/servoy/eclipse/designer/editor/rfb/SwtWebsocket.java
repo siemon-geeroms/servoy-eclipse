@@ -103,7 +103,7 @@ public class SwtWebsocket
 		{
 			if (method.getAnnotation(OnOpen.class) != null)
 			{
-				method.invoke(endpoint, args);
+				method.method.invoke(endpoint, args);
 			}
 		}
 		// @ServerEndpoint(value = "/websocket/{endpointType}/{sessionid}/{windowid}/{argument}")

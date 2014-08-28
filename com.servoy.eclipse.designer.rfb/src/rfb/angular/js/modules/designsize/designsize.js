@@ -16,20 +16,20 @@ angular.module('designsize',['toolbar','editor']).run(function($rootScope, $tool
 	
 	var isPortrait = true;
 	var lastClicked;
-	var btnTableSize = {
-			text: "Table",
+	var btnTabletSize = {
+			text: "Tablet",
 			icon: "designsize/ipad-landscape-portrait-64x64.png",
 			enabled: true,
 			onclick: function() {
-				if(lastClicked == "Table") isPortrait = !isPortrait;
+				if(lastClicked == "Tablet") isPortrait = !isPortrait;
 				if(isPortrait) 
 					editor.setContentSize("768px", "1024px");
 				else
 					editor.setContentSize("1024px", "768px");
-				lastClicked = "Table";
+				lastClicked = "Tablet";
 			},
 		};
-	$toolbar.add(btnTableSize, TOOLBAR_CATEGORIES.STICKY);	
+	$toolbar.add(btnTabletSize, TOOLBAR_CATEGORIES.STICKY);	
 
 	var btnMobileSize = {
 			text: "Phone",
@@ -45,6 +45,26 @@ angular.module('designsize',['toolbar','editor']).run(function($rootScope, $tool
 			},
 		};
 	$toolbar.add(btnMobileSize, TOOLBAR_CATEGORIES.STICKY);
+	
+	var btnCustomSize = {
+			text: "240x480",
+			enabled: true,
+			onclick: function(selection) {
+				if(lastClicked == selection) isPortrait = !isPortrait;
+				var s = selection.split("x");
+				if(isPortrait) 
+					editor.setContentSize(s[0] + "px", s[1] + "px");
+				else
+					editor.setContentSize(s[1] + "px", s[0] + "px");
+				lastClicked = selection;
+			},
+			list: ["240x480", "480x640"],
+			onselection: function(selection) {
+				this.onclick(selection);
+				return selection;
+			}
+		};
+	$toolbar.add(btnCustomSize, TOOLBAR_CATEGORIES.STICKY);	
 	
 	var btnRotate = {
 			text: "Rotate",

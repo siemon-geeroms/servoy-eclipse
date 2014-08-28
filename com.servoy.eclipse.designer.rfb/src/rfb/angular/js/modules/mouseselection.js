@@ -1,32 +1,24 @@
 angular.module('mouseselection',['editor']).run(function($rootScope, $pluginRegistry){
-	
+
 	$pluginRegistry.registerPlugin(function(editorScope) {
 		var selectedNodeMouseEvent;
+		var lassoStarted = false;
+		var mouseDownPosition = {"left":-1, "top":-1};
+		var lassoDiv = editorScope.glasspane.firstElementChild
+
 		function getNode(event) {
 			var node = null;
 			var element = event.target;
 			do
 			{
-				if (element.hasAttribute("svy-model") && element.hasAttribute("name")) {
+				if (element.hasAttribute("svy-id")) {
 					node = element;
-					// TODO search for the most top level?
+					// TODO do we really need to search for the most top level?
 					// but if we have layout components in designer then we do need to select the nested.
-					
-					// this node could be the angular tag (replace is false, or dynamic template) with a 0 size
-					// try to look if there is a child element that is better suited.
-					var nd = $(node);
-					var height = nd.outerHeight()
-					var width = nd.outerWidth()
-					if (height == 0 && width == 0) {
-						var children = nd.children();
-						if (children.length == 1 && $(children[0]).outerHeight() > 0 && $(children[0]).outerWidth() > 0) {
-							node = children[0];
-						}
-					}
 				}
-				element = element.parentElement;
-			} while(element)
-			return node;
+				element = element.parentNode;
+			} while(element && element.hasAttribute)
+				return node;
 		}
 		function select(event, node) {
 			if (event.ctrlKey) {
@@ -61,12 +53,23 @@ angular.module('mouseselection',['editor']).run(function($rootScope, $pluginRegi
 			}
 		}
 		function getElementsByRectangle(p1, p2, percentage) {
-			var nodes = editorScope.contentDocument.querySelectorAll("[svy-model]")
+			var temp = 0;
+			if (p1.left > p2.left) {
+				var temp = p1.left;
+				p1.left = p2.left;
+				p2.left = temp;
+			}
+			if (p1.top > p2.top) {
+				var temp = p1.top;
+				p1.top = p2.top;
+				p2.top = temp;
+			}	
+			var nodes = editorScope.contentDocument.querySelectorAll("[svy-id]")
 			var matchedElements = []
 			for (var i = 0; i < nodes.length; i++) {
 				var element = nodes[i]
 				var rect = element.getBoundingClientRect();
-				
+
 				if (percentage == undefined || percentage == 100) { //Element must be fully enclosed
 					if (p1.top <= rect.top && p1.left <= rect.left && p2.top >= rect.top + element.clientHeight && p2.left >= rect.left + element.clientWidth) {
 						matchedElements.push(element)
@@ -106,8 +109,100 @@ angular.module('mouseselection',['editor']).run(function($rootScope, $pluginRegi
 			selectedNodeMouseEvent = null;
 			event.preventDefault();
 		}
+
+		function onmousedownLasso(event) {
+			var node = getNode(event);
+			if (!node) {
+				startLasso(event);
+			}
+		}
+
+		function onmouseupLasso(event) {
+			stopLasso(event);
+		}
+
+		function startLasso(event) {
+			mouseDownPosition = getMousePosition(event);
+			lassoDiv.style.left = mouseDownPosition.left + 'px';
+			lassoDiv.style.top = mouseDownPosition.top + 'px';
+			editorScope.moveGlasspaneAbove();
+			lassoStarted = true;
+		}
+
+		function stopLasso(event) {
+			if (lassoStarted) {
+				editorScope.moveGlasspaneBelow();
+				var lassoMouseSelectPosition = getMousePosition(event);
+				var p1 = adjustForPadding(mouseDownPosition);
+				var p2 = adjustForPadding(lassoMouseSelectPosition);
+				var selectedElements = getElementsByRectangle(p1,p2,100);
+				editorScope.setSelection(selectedElements);
+				lassoStarted = false;
+				lassoDiv.style.width = '0px';
+				lassoDiv.style.height = '0px';
+			}
+		}
+
+		function adjustForPadding(mousePosition) {
+			mousePosition.left -= parseInt(angular.element(editorScope.glasspane.parentElement).css("padding-left").replace("px",""));
+			mousePosition.top  -= parseInt(angular.element(editorScope.glasspane.parentElement).css("padding-top").replace("px",""));
+			return mousePosition;
+		}
+
+		function getMousePosition(event) {
+			var xMouseDown = -1;
+			var yMouseDown = -1;
+			if (event.pageX || event.pageY){
+				xMouseDown = event.pageX;
+				yMouseDown = event.pageY;
+			}
+			else 
+				if (event.clientX || event.clientY){
+					xMouseDown = event.clientX;
+					yMouseDown = event.clientY;			
+				}
+			if (lassoStarted || hasClass(event.target,"contentframe-overlay")) {
+				xMouseDown -= editorScope.glasspane.parentElement.offsetLeft;
+				yMouseDown -= editorScope.glasspane.parentElement.offsetTop;
+				xMouseDown += editorScope.glasspane.parentElement.scrollLeft;
+				yMouseDown += editorScope.glasspane.parentElement.scrollTop;
+			}
+			else if (!hasClass(event.target,"contentframe-overlay")){
+				xMouseDown += parseInt(angular.element(editorScope.glasspane.parentElement).css("padding-left").replace("px",""));
+				yMouseDown += parseInt(angular.element(editorScope.glasspane.parentElement).css("padding-top").replace("px",""));
+			}
+			return {"left":xMouseDown, "top":yMouseDown};
+		}
+
+		function hasClass(element, cls) {
+			return (' ' + element.className + ' ').indexOf(' ' + cls + ' ') > -1;
+		}
+
+		function onmousemove(event) {
+			if (lassoStarted) {
+				mouseMovePosition = getMousePosition(event);
+				if (mouseMovePosition.left < mouseDownPosition.left){
+					lassoDiv.style.left = mouseMovePosition.left + 'px';
+				}
+				if (mouseMovePosition.top < mouseDownPosition.top){
+					lassoDiv.style.top = mouseMovePosition.top +'px'
+				}
+				var currentWidth = mouseMovePosition.left - mouseDownPosition.left;
+				var currentHeight = mouseMovePosition.top - mouseDownPosition.top;
+				lassoDiv.style.width = Math.abs(currentWidth) + 'px';
+				lassoDiv.style.height = Math.abs(currentHeight) + 'px';
+			}
+		}
+
 		// register event on editor form iframe (see register event in the editor.js)
 		editorScope.registerDOMEvent("mousedown","FORM", onmousedown); // real selection in editor content iframe
 		editorScope.registerDOMEvent("mouseup","FORM", onmouseup); // real selection in editor content iframe
+
+		editorScope.registerDOMEvent("mousedown","FORM", onmousedownLasso); // real selection in editor content iframe
+		editorScope.registerDOMEvent("mouseup","FORM", onmouseupLasso); // real selection in editor content iframe
+		editorScope.registerDOMEvent("mousedown","CONTENTFRAME_OVERLAY", onmousedownLasso); 
+		editorScope.registerDOMEvent("mouseup","CONTENTFRAME_OVERLAY", onmouseupLasso); 
+		editorScope.registerDOMEvent("mousemove","CONTENTFRAME_OVERLAY", onmousemove); 
+
 	})
 });

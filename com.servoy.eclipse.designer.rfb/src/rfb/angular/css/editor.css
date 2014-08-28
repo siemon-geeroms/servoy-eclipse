@@ -27,7 +27,7 @@ body {
 	bottom: 0px;
 	left: 0px; 
 	width: 200px; 
-	padding-left: 8px
+	padding-left: 8px;
 }
 
 .content {
@@ -92,4 +92,14 @@ body {
 .glasspane {
 	display: none;
 	z-index: 2
+}
+
+#lasso {
+	position:relative; 
+	left: 0px; 
+	top: 0px; 
+	height:0px; 
+	width:0px; 
+	border-style:dashed; 
+	border-width: 1px
 }

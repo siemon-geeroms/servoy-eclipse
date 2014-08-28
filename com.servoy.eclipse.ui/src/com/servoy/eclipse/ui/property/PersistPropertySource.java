@@ -775,7 +775,7 @@ public class PersistPropertySource implements IPropertySource, IAdaptable, IMode
 		/*
 		 * Category based property controllers.
 		 */
-		if (propertyType == FunctionPropertyType.INSTANCE)
+		if (FunctionPropertyType.INSTANCE.getClass().isAssignableFrom(propertyType.getClass()))
 		{
 			final Table table = form == null ? null : form.getTable();
 			return new MethodPropertyController<Integer>(id, displayName, persistContext, new MethodListOptions(true,
@@ -788,6 +788,8 @@ public class PersistPropertySource implements IPropertySource, IAdaptable, IMode
 					{
 						public MethodWithArguments convertProperty(Object id, Integer value)
 						{
+							if (value == null) return null;
+
 							SafeArrayList<Object> args = null;
 							SafeArrayList<Object> params = null;
 							if (persistContext != null && persistContext.getPersist() instanceof AbstractBase)

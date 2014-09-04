@@ -55,38 +55,37 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				if (target == "FORM") {
 					$($scope.contentDocument).on(eventType, null, eventCallback)
 				} else if (target == "EDITOR") {
-					console.log("registering dom event: " + eventType)
-					// $(doc) is the document of the editor (or a div)
-					//	$(doc).on(eventType, context, callback.bind(this))
+					$($element).on(eventType, null, eventCallback);
 				}
 				else if (target == "CONTENT_AREA")
 				{
 					$($element.find('.content-area')[0]).on(eventType, null, eventCallback)
 				}
 				else if (target == "CONTENTFRAME_OVERLAY") {
-					$($scope.glasspane).on(eventType, null, callback.bind(this))
+					$($scope.glasspane).on(eventType, null, eventCallback)
 				}
 				return eventCallback;
 			}
-			
-			$scope.moveGlasspaneAbove = function (){
-				$scope.glasspane.style.zIndex = "1";
-			} 
-			$scope.moveGlasspaneBelow = function (){
-				$scope.glasspane.style.zIndex = "0";
-			} 
 			
 			$scope.unregisterDOMEvent = function(eventType, target,callback) {
 				if (target == "FORM") {
 					$($scope.contentDocument).off(eventType,null,callback)
 				} else if (target == "EDITOR") {
-					console.log("unregistering dom event: " + eventType)
+					$($element).off(eventType,null,callback);
 				}
 				else if (target == "CONTENT_AREA")
 				{
 					$($element.find('.content-area')[0]).off(eventType,null,callback);
 				}
 			}
+			
+			$scope.convertToContentPoint = function(point){
+				var frameRect = $element.find('.contentframe')[0].getBoundingClientRect()
+				point.x = point.x - frameRect.left;
+				point.y = point.y - frameRect.top;
+				return point
+			}
+			
 			$scope.getSelection = function() {
 				//Returning a copy so selection can't be changed my modifying the selection array
 				return selection.slice(0)
@@ -207,31 +206,38 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 			
 			var promise = $editorService.connect();
 			promise.then(function() {
-				$scope.contentframe = "editor-content.html?endpoint=designclient&id=%23" + $element.attr("id") + "&f=" +formName +"&s=" + $editorService.getURLParameter("s");
+				var replacews = "";
+				var value = $editorService.getURLParameter("replacewebsocket");
+				if (value) replacews = "&replacewebsocket=true";
+				$scope.contentframe = "editor-content.html?endpoint=designclient&id=%23" + $element.attr("id") + "&f=" +formName +"&s=" + $editorService.getURLParameter("s") + replacews;
 			})
 	      },
 	      templateUrl: 'templates/editor.html',
 	      replace: true
 	    };
 	
-}).factory("$editorService", function($rootScope, $webSocket, $log, $q,$window, EDITOR_EVENTS, $rootScope) {
-	
-	if (typeof(console) == "undefined") {
-		$window.console = {
-				log: function(msg) {
-					if (typeof(consoleLog) != "undefined") {
-						consoleLog("log",msg)
-					}
-					else alert(msg);
-					
-				},
-				error: function(msg) {
-					if (typeof(consoleLog) != "undefined") {
-						consoleLog("error",msg)
-					}
-					else alert(msg);
+}).factory("$editorService", function($rootScope, $webSocket, $log, $q,$window, EDITOR_EVENTS, $rootScope,$timeout) {
+	var realConsole = $window.console;
+	$window.console = {
+			log: function(msg) {
+				if (typeof(consoleLog) != "undefined") {
+					consoleLog("log",msg)
 				}
-		}
+				else if (realConsole) {
+					realConsole.log(msg)
+				}
+				else alert(msg);
+				
+			},
+			error: function(msg) {
+				if (typeof(consoleLog) != "undefined") {
+					consoleLog("error",msg)
+				}
+				else if (realConsole) {
+					realConsole.error(msg)
+				}				
+				else alert(msg);
+			}
 	}
 	var wsSession = null;
 	var connected = false;
@@ -241,12 +247,11 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 		return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec($window.location.search)||[,""])[1].replace(/\+/g, '%20'))||null
 	}
 	function testWebsocket() {
-		if (typeof(WebSocket) == 'undefined')
+		if (typeof(WebSocket) == 'undefined' || getURLParameter("replacewebsocket"))
 		{
 			if (typeof(SwtWebsocketBrowserFunction) != 'undefined') 
 			{
 				WebSocket = SwtWebSocket
-
 				var $currentSwtWebsockets = [];
 				
 				$window.addWebSocket = function(socket) {
@@ -328,6 +333,10 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 		
 		sendChanges: function(properties) {
 			wsSession.callService('formeditor', 'setProperties', properties, true)
+		},
+		
+		createComponent: function(component) {
+			wsSession.callService('formeditor', 'createComponent', component, true)
 		},
 		
 		getURLParameter: getURLParameter,

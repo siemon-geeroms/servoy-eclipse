@@ -109,7 +109,7 @@ public class WebComponentPropertyHandler implements IPropertyHandler
 			ServoyLog.logError(e);
 		}
 
-		if (propertyDescription.getType() == ColorPropertyType.INSTANCE)
+		if (ColorPropertyType.TYPE_NAME.equals(propertyDescription.getType().getName()))
 		{
 			return ColorPropertyController.PROPERTY_COLOR_CONVERTER.convertValue(null, (String)value);
 		}
@@ -128,6 +128,9 @@ public class WebComponentPropertyHandler implements IPropertyHandler
 
 		if (value == null)
 		{
+			// TODO propertyDescription.getDefaultValue() is JSON... I think NGConversions conversion 1 and 3 should be applied here to get something of the same type as propertyDescription.getType().defaultValue()
+			// or maybe nothing really has to be returned here but "DEFAULT" cause the designer doesn't really need to show the default value, or does it?
+			// anyway, currently it's not ok as propertyDescription.getDefaultValue() is a JSON value (can be primitive though) and propertyDescription.getType().defaultValue() is a sablo type value default (can be pure java, not JSON, can also be primitive)
 			if (propertyDescription.getDefaultValue() != null)
 			{
 				return propertyDescription.getDefaultValue();
@@ -143,7 +146,7 @@ public class WebComponentPropertyHandler implements IPropertyHandler
 		Bean bean = (Bean)obj;
 
 		Object convertedValue = value;
-		if (propertyDescription.getType() == ColorPropertyType.INSTANCE)
+		if (ColorPropertyType.TYPE_NAME.equals(propertyDescription.getType().getName()))
 		{
 			convertedValue = PropertyColorConverter.getColorString((Color)value);
 		}

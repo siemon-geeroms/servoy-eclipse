@@ -1,5 +1,15 @@
 angular.module('editorContent',['servoyApp'])
- .controller("MainController", function($scope, $window, $timeout, $windowService, $webSocket, $servoyInternal){
+ .controller("MainController", function($scope, $window, $timeout, $windowService, $webSocket, $servoyInternal,$rootScope,$compile,$solutionSettings){
+	 $rootScope.createComponent = function(html,model) {
+			 var compScope = $scope.$new(true);
+			 compScope.model = model;
+			 compScope.api = {};
+			 compScope.handlers = {};
+			 var el = $compile(html)(compScope);
+			 $('body').append(el); 
+			 return el;
+		  }
+	$scope.solutionSettings = $solutionSettings; 
 	var realConsole = $window.console;
 	$window.console = {
 			log: function(msg) {
@@ -50,7 +60,9 @@ angular.module('editorContent',['servoyApp'])
 	 var formName = getURLParameter("f");
 	 $scope.getUrl = function() {
 		 if ($webSocket.isConnected()) {
-			 return $windowService.getFormUrl(formName);
+			 var url = $windowService.getFormUrl(formName);
+			 // this main url is in design (the template must have special markers)
+			 return url?url+"&design=true":null;
 		 }
 	 }
  }).factory("$editorContentService", function() {

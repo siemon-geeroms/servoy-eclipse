@@ -36,7 +36,7 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 			var formName =  $editorService.getURLParameter("f");
 			var formLayout =  $editorService.getURLParameter("l");
 			var editorContentRootScope = null;
-			var formState = null;
+			var servoyInternal = null;
 			
 			function fireSelectionChanged(){
 				//Reference to editor should be gotten from Editor instance somehow
@@ -61,6 +61,10 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				{
 					$($element.find('.content-area')[0]).on(eventType, null, eventCallback)
 				}
+				else if (target == "PALETTE")
+				{
+					$($element.find('.palette')[0]).on(eventType, null, eventCallback)
+				}
 				else if (target == "CONTENTFRAME_OVERLAY") {
 					$($scope.glasspane).on(eventType, null, eventCallback)
 				}
@@ -77,12 +81,27 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				{
 					$($element.find('.content-area')[0]).off(eventType,null,callback);
 				}
+				else if (target == "CONTENTFRAME_OVERLAY")
+				{
+					$($scope.glasspane).off(eventType, null, callback)
+				}
+				else if (target == "PALETTE")
+				{
+					$($element.find('.palette')[0]).off(eventType,null,callback);
+				}
 			}
 			
 			$scope.convertToContentPoint = function(point){
 				var frameRect = $element.find('.contentframe')[0].getBoundingClientRect()
-				point.x = point.x - frameRect.left;
-				point.y = point.y - frameRect.top;
+				if (point.x && point.y)
+				{
+					point.x = point.x - frameRect.left;
+					point.y = point.y - frameRect.top;
+				} else if (point.top && point.left)
+				{
+					point.left = point.left - frameRect.left;
+					point.top = point.top - frameRect.top;
+				}
 				return point
 			}
 			
@@ -141,7 +160,7 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 			}
 			
 			$scope.getFormState = function() {
-				return formState;
+				return servoyInternal.initFormState(formName); // this is a normal direct get if no init config is given
 			}
 			
 			$scope.refreshEditorContent = function() {
@@ -149,6 +168,10 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 					editorContentRootScope.$digest();
 					$rootScope.$broadcast(EDITOR_EVENTS.SELECTION_CHANGED,selection)
 				}
+			}
+			
+			$scope.getEditorContentRootScope = function() {
+				return editorContentRootScope;
 			}
 			
 			$scope.contentStyle = {width: "100%", height: "100%"};
@@ -172,11 +195,22 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				var htmlTag = $scope.contentDocument.getElementsByTagName("html")[0];
 				var injector = $scope.contentWindow.angular.element(htmlTag).injector();
 				editorContentRootScope = injector.get("$rootScope");
-				var servoyInternal = injector.get("$servoyInternal");
-				var promise = servoyInternal.getFormState(formName);
-				promise.then(function(state){
-					formState = state;
-				})
+				servoyInternal = injector.get("$servoyInternal");
+				$scope.glasspane.focus()
+				$(function(){   
+				    $(document).keydown(function(objEvent) {   
+				        // disable select-all  
+				        if (objEvent.ctrlKey) {          
+				            if (objEvent.keyCode == 65) {                         
+				                return false;
+				            }            
+				        }
+				        else if (objEvent.keyCode == 46) {
+				            // send the DELETE key code to the server
+				        	$editorService.keyPressed(objEvent);
+				        }
+				    });
+				});  
 			});
 			
 
@@ -203,7 +237,7 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				}
 			});
 			
-			
+			$editorService.registerEditor($scope);
 			var promise = $editorService.connect();
 			promise.then(function() {
 				var replacews = "";
@@ -317,8 +351,11 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 		}
 		wsSession.callService('formeditor', 'setSelection', {selection: sel}, true)
 	})
-	
+	var editorScope; //todo this should become a array if we want to support multiply editors on 1 html page.
 	return {
+		registerEditor: function(scope) {
+			editorScope = scope;
+		},
 		connect: function() {
 			if (deferred) return deferred.promise;
 			deferred = $q.defer();
@@ -329,6 +366,10 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				deferred = null;
 			}
 			return promise;
+		},
+		
+		keyPressed: function(event) {
+			wsSession.callService('formeditor', 'keyPressed', {ctrl:event.ctrlKey,shift:event.shiftKey,alt:event.altKey,keyCode:event.keyCode}, true)
 		},
 		
 		sendChanges: function(properties) {
@@ -342,7 +383,21 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 		getURLParameter: getURLParameter,
 		
 		updateSelection: function(ids) {
-			// TODO
+			var prevSelection = editorScope.getSelection();
+			var changed = false;
+			var selection = [];
+			if (ids && ids.length > 0) {
+				var nodes = editorScope.contentDocument.querySelectorAll("[svy-id]")
+				for(var i=0;i<nodes.length;i++) {
+					var id = nodes[i].getAttribute("svy-id");
+					if (ids.indexOf(id) != -1) {
+						selection.push(nodes[i]);
+						changed = changed || prevSelection.indexOf(nodes[i]) == -1;
+						if (selection.length == ids.length) break;
+					}
+				}
+			}
+			if (changed) editorScope.setSelection(selection);
 		}
 	
 	// add more service methods here

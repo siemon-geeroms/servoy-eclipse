@@ -21,9 +21,11 @@ import java.awt.Dimension;
 import java.awt.Point;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.gef.commands.CompoundCommand;
 import org.eclipse.jface.viewers.ISelectionProvider;
+import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.swt.widgets.Display;
 import org.json.JSONArray;
@@ -34,16 +36,25 @@ import org.sablo.websocket.IServerService;
 import com.servoy.eclipse.core.ServoyModelManager;
 import com.servoy.eclipse.designer.editor.BaseRestorableCommand;
 import com.servoy.eclipse.designer.editor.BaseVisualFormEditor;
+import com.servoy.eclipse.designer.editor.commands.FormElementDeleteCommand;
 import com.servoy.eclipse.model.util.ModelUtils;
 import com.servoy.eclipse.model.util.ServoyLog;
 import com.servoy.eclipse.ui.property.PersistPropertySource;
 import com.servoy.j2db.persistence.BaseComponent;
+import com.servoy.j2db.persistence.Bean;
 import com.servoy.j2db.persistence.Field;
 import com.servoy.j2db.persistence.GraphicalComponent;
+import com.servoy.j2db.persistence.IDeveloperRepository;
+import com.servoy.j2db.persistence.IFormElement;
 import com.servoy.j2db.persistence.IPersist;
+import com.servoy.j2db.persistence.Portal;
+import com.servoy.j2db.persistence.RectShape;
+import com.servoy.j2db.persistence.RepositoryException;
 import com.servoy.j2db.persistence.StaticContentSpecLoader;
+import com.servoy.j2db.persistence.TabPanel;
 import com.servoy.j2db.util.Debug;
 import com.servoy.j2db.util.UUID;
+import com.servoy.j2db.util.Utils;
 
 /**
  * Handle requests from the rfb html editor.
@@ -70,8 +81,6 @@ public class EditorServiceHandler implements IServerService
 			this.source = source;
 			this.propertyName = propertyName;
 			this.value = value;
-
-			System.err.println("created set command: " + propertyName + " ," + value);
 		}
 
 		@Override
@@ -83,6 +92,7 @@ public class EditorServiceHandler implements IServerService
 
 	private final BaseVisualFormEditor editorPart;
 	private final ISelectionProvider selectionProvider;
+	private final AtomicInteger id = new AtomicInteger();
 
 	public EditorServiceHandler(BaseVisualFormEditor editorPart, ISelectionProvider selectionProvider)
 	{
@@ -116,6 +126,23 @@ public class EditorServiceHandler implements IServerService
 						selectionProvider.setSelection(selection.length == 0 ? null : new StructuredSelection(selection));
 					}
 				});
+			}
+			else if ("keyPressed".equals(methodName))
+			{
+				if (args.optInt("keyCode") == 46)
+				{
+					Display.getDefault().asyncExec(new Runnable()
+					{
+						public void run()
+						{
+							IPersist[] selection = (IPersist[])((IStructuredSelection)selectionProvider.getSelection()).toList().toArray(new IPersist[0]);
+							if (selection.length > 0)
+							{
+								editorPart.getCommandStack().execute(new FormElementDeleteCommand(selection));
+							}
+						}
+					});
+				}
 			}
 			else if ("setProperties".equals(methodName))
 			{
@@ -157,6 +184,8 @@ public class EditorServiceHandler implements IServerService
 					{
 						editorPart.getCommandStack().execute(new BaseRestorableCommand("createComponent")
 						{
+							private IPersist newPersist;
+
 							@Override
 							public void execute()
 							{
@@ -165,7 +194,6 @@ public class EditorServiceHandler implements IServerService
 									int x = args.getInt("x");
 									int y = args.getInt("y");
 									String name = args.getString("name");
-									IPersist newPersist = null;
 									if ("svy-button".equals(name))
 									{
 										GraphicalComponent gc = editorPart.getForm().createNewGraphicalComponent(new Point(x, y));
@@ -249,14 +277,60 @@ public class EditorServiceHandler implements IServerService
 									{
 										Field field = editorPart.getForm().createNewField(new Point(x, y));
 										field.setDisplayType(Field.HTML_AREA);
-										newPersist = field;
-									}
-									else if ("svy-htmlview".equals(name))
-									{
-										Field field = editorPart.getForm().createNewField(new Point(x, y));
-										field.setDisplayType(Field.HTML_AREA);
 										field.setEditable(false);
 										newPersist = field;
+									}
+									else if ("svy-tabpanel".equals(name))
+									{
+										String compName = "tabpanel_" + id.incrementAndGet();
+										while (!checkName(compName))
+										{
+											compName = "tabpanel_" + id.incrementAndGet();
+										}
+										TabPanel tabPanel = editorPart.getForm().createNewTabPanel(compName);
+										tabPanel.setLocation(new Point(x, y));
+										newPersist = tabPanel;
+									}
+									else if ("svy-splitpane".equals(name))
+									{
+										String compName = "tabpanel_" + id.incrementAndGet();
+										while (!checkName(compName))
+										{
+											compName = "tabpanel_" + id.incrementAndGet();
+										}
+										TabPanel tabPanel = editorPart.getForm().createNewTabPanel(compName);
+										tabPanel.setLocation(new Point(x, y));
+										tabPanel.setTabOrientation(TabPanel.SPLIT_HORIZONTAL);
+										newPersist = tabPanel;
+									}
+									else if ("svy-portal".equals(name))
+									{
+										String compName = "portal_" + id.incrementAndGet();
+										while (!checkName(compName))
+										{
+											compName = "portal_" + id.incrementAndGet();
+										}
+										Portal portal = editorPart.getForm().createNewPortal(compName, new Point(x, y));
+										newPersist = portal;
+									}
+									else if ("svy-rectangle".equals(name))
+									{
+										RectShape shape = editorPart.getForm().createNewRectangle(new Point(x, y));
+										shape.setLineSize(1);
+										newPersist = shape;
+									}
+									else
+									{
+										// bean
+										String compName = "bean_" + id.incrementAndGet();
+										while (!checkName(compName))
+										{
+											compName = "bean_" + id.incrementAndGet();
+										}
+										String packageName = args.getString("packageName");
+										Bean bean = editorPart.getForm().createNewBean(compName, packageName + ":" + name);
+										bean.setLocation(new Point(x, y));
+										newPersist = bean;
 									}
 									ServoyModelManager.getServoyModelManager().getServoyModel().firePersistsChanged(false,
 										Arrays.asList(new IPersist[] { newPersist }));
@@ -267,10 +341,38 @@ public class EditorServiceHandler implements IServerService
 								}
 							}
 
+							/**
+							 * @param compName
+							 */
+							private boolean checkName(String compName)
+							{
+								Iterator<IFormElement> fields = editorPart.getForm().getFormElementsSortedByFormIndex();
+								for (IFormElement element : Utils.iterate(fields))
+								{
+									if (compName.equals(element.getName()))
+									{
+										return false;
+									}
+								}
+								return true;
+							}
+
 							@Override
 							public void undo()
 							{
-
+								try
+								{
+									if (newPersist != null)
+									{
+										((IDeveloperRepository)newPersist.getRootObject().getRepository()).deleteObject(newPersist);
+										ServoyModelManager.getServoyModelManager().getServoyModel().firePersistsChanged(false,
+											Arrays.asList(new IPersist[] { newPersist }));
+									}
+								}
+								catch (RepositoryException e)
+								{
+									ServoyLog.logError("Could not undo create elements", e);
+								}
 							}
 
 						});

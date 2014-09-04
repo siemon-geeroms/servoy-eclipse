@@ -14,3 +14,4 @@ Bundle-ClassPath: .
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Import-Package: javax.websocket.server;version="1.0.0",
  org.osgi.framework
+Export-Package: com.servoy.eclipse.designer.rfb.endpoint

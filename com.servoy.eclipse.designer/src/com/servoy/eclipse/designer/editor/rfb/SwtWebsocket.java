@@ -20,7 +20,6 @@ package com.servoy.eclipse.designer.editor.rfb;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
-import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.security.Principal;
@@ -34,20 +33,17 @@ import javax.websocket.CloseReason;
 import javax.websocket.EncodeException;
 import javax.websocket.Extension;
 import javax.websocket.MessageHandler;
-import javax.websocket.OnOpen;
 import javax.websocket.RemoteEndpoint.Async;
 import javax.websocket.RemoteEndpoint.Basic;
 import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
-import javax.websocket.server.ServerEndpoint;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.browser.BrowserFunction;
 import org.eclipse.swt.widgets.Display;
-import org.sablo.websocket.WebsocketEndpoint;
 
-import com.servoy.j2db.server.ngclient.startup.ServicesProvider;
+import com.servoy.eclipse.designer.rfb.endpoint.EditorEndpoint;
 import com.servoy.j2db.util.Debug;
 
 /**
@@ -58,54 +54,10 @@ import com.servoy.j2db.util.Debug;
  */
 public class SwtWebsocket
 {
-	private final WebsocketEndpoint websocketEndpoint;
-	private final Map<String, String> endpointParameters = new HashMap<String, String>();
+	private final EditorEndpoint /* WebsocketEndpoint */websocketEndpoint;
 
-	public SwtWebsocket(Browser browser, String context, String uriString, int id) throws Exception
+	public SwtWebsocket(Browser browser, String uriString, int id) throws Exception
 	{
-
-		String[] uriPath = uriString.split("/");
-		Class< ? > endpointClass = null;
-
-		for (Class< ? > ac : new ServicesProvider().getAnnotatedClasses(context))
-		{
-			ServerEndpoint serverEndpoint = ac.getAnnotation(ServerEndpoint.class);
-			if (serverEndpoint != null)
-			{
-				String[] path = serverEndpoint.value().split("/");
-				// match with uriPath
-				boolean match = path.length == uriPath.length - 2; // RAGTEST ws://
-				for (int i = 0; match && i < path.length; i++)
-				{
-					if (path[i].startsWith("{") && path[i].endsWith("}"))
-					{
-						endpointParameters.put(path[i].substring(1, path[i].length() - 1), uriPath[i + 2]);
-					}
-					else
-					{
-						match = path[i].equals(uriPath[i + 2]);
-					}
-				}
-				if (match)
-				{
-					endpointClass = ac;
-				}
-			}
-		}
-
-		if (endpointClass == null)
-		{
-			throw new IllegalArgumentException("RAGTEST");
-		}
-
-		Object endpoint = endpointClass.newInstance();
-		for (Method method : endpointClass.getMethods())
-		{
-			if (method.getAnnotation(OnOpen.class) != null)
-			{
-				method.method.invoke(endpoint, args);
-			}
-		}
 		// @ServerEndpoint(value = "/websocket/{endpointType}/{sessionid}/{windowid}/{argument}")
 		String[] split = uriString.split("/");
 		if (split.length < 5 || !"websocket".equals(split[split.length - 5]))
@@ -113,15 +65,8 @@ public class SwtWebsocket
 			throw new IllegalArgumentException(uriString);
 		}
 
-		// RAGTEST factory
-		websocketEndpoint = new WebsocketEndpoint(split[split.length - 4] /* endpointType */)
-		{
-		};
-		websocketEndpoint.start(new SwtWebSocketSession(browser, id), //
-			/* sessionid = */split[split.length - 3], //
-			/* windowid = */split[split.length - 2], //
-			/* argument = */split[split.length - 1] //
-		);
+		websocketEndpoint = new EditorEndpoint();
+		websocketEndpoint.start(new SwtWebSocketSession(browser, id), "theeditorid");
 	}
 
 	private void send(String string)
@@ -134,7 +79,7 @@ public class SwtWebsocket
 		websocketEndpoint.onClose();
 	}
 
-	public static void installFakeWebSocket(final Browser browser, final String context)
+	public static void installFakeWebSocket(final Browser browser)
 	{
 		// install fake WebSocket in case browser does not support it
 		new BrowserFunction(browser, "SwtWebsocketBrowserFunction", true, new String[0])
@@ -161,7 +106,7 @@ public class SwtWebsocket
 								swtWebsocket.close();
 							}
 
-							swtWebsocket = new SwtWebsocket(browser, context, ((String)arguments[1]), ((Number)arguments[2]).intValue());
+							swtWebsocket = new SwtWebsocket(browser, ((String)arguments[1]), ((Number)arguments[2]).intValue());
 							swtWebsockets.put(arguments[2].toString(), swtWebsocket);
 						}
 

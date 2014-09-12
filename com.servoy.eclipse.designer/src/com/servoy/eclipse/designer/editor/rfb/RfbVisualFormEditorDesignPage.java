@@ -38,6 +38,7 @@ import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.PartInitException;
+import org.sablo.specification.WebComponentSpecProvider;
 import org.sablo.websocket.WebsocketSessionManager;
 
 import com.servoy.eclipse.core.Activator;
@@ -76,6 +77,8 @@ public class RfbVisualFormEditorDesignPage extends BaseVisualFormEditorDesignPag
 	// for updating selection in editor when selection changes in IDE
 	private final ISelectionListener selectionListener = new ISelectionListener()
 	{
+		private List<String> lastSelection = new ArrayList<String>();
+
 		@SuppressWarnings("unchecked")
 		@Override
 		public void selectionChanged(IWorkbenchPart part, ISelection selection)
@@ -91,15 +94,19 @@ public class RfbVisualFormEditorDesignPage extends BaseVisualFormEditorDesignPag
 						uuids.add(persist.getUUID().toString());
 					}
 				}
-				editorWebsocketSession.getEventDispatcher().addEvent(new Runnable()
+				if (uuids.size() > 0 && (uuids.size() != lastSelection.size() || !uuids.containsAll(lastSelection)))
 				{
-					@Override
-					public void run()
+					lastSelection = uuids;
+					editorWebsocketSession.getEventDispatcher().addEvent(new Runnable()
 					{
-						editorWebsocketSession.getService(EditorWebsocketSession.EDITOR_SERVICE).executeAsyncServiceCall("updateSelection",
-							new Object[] { uuids.toArray() });
-					}
-				});
+						@Override
+						public void run()
+						{
+							editorWebsocketSession.getService(EditorWebsocketSession.EDITOR_SERVICE).executeAsyncServiceCall("updateSelection",
+								new Object[] { uuids.toArray() });
+						}
+					});
+				}
 			}
 		}
 	};
@@ -116,6 +123,8 @@ public class RfbVisualFormEditorDesignPage extends BaseVisualFormEditorDesignPag
 	@Override
 	public void createPartControl(Composite parent)
 	{
+		// always reload the current spec so that always the latest stuff is shown.
+		WebComponentSpecProvider.reload();
 		// Serve requests for rfb editor
 		String editorId = UUID.randomUUID().toString();
 		WebsocketSessionManager.addSession(editorWebsocketSession = new EditorWebsocketSession(editorId));

@@ -7,23 +7,23 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				plugins[i](editorScope);
 			}
 		},
-		
+
 		registerPlugin: function(plugin) {
 			plugins[plugins.length] = plugin;
 		},
 	}
 }).value("EDITOR_EVENTS", {
-    SELECTION_CHANGED : "SELECTION_CHANGED"
+	SELECTION_CHANGED : "SELECTION_CHANGED"
 }).directive("editor", function( $window, $pluginRegistry,$rootScope,EDITOR_EVENTS, $timeout,$editorService){
 	return {
-	      restrict: 'E',
-	      transclude: true,
-	      scope: {},
-	      link: function($scope, $element, $attrs) {
+		restrict: 'E',
+		transclude: true,
+		scope: {},
+		link: function($scope, $element, $attrs) {
 			var timeout;
 			var delta = {
-				addedNodes: [],
-				removedNodes: []
+					addedNodes: [],
+					removedNodes: []
 			}
 			var selection = [];
 			function markDirty() {
@@ -32,12 +32,12 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				}
 				timeout = $timeout(fireSelectionChanged, 1)
 			}
-			
+
 			var formName =  $editorService.getURLParameter("f");
 			var formLayout =  $editorService.getURLParameter("l");
 			var editorContentRootScope = null;
 			var servoyInternal = null;
-			
+
 			function fireSelectionChanged(){
 				//Reference to editor should be gotten from Editor instance somehow
 				//instance.fire(Editor.EVENT_TYPES.SELECTION_CHANGED, delta)
@@ -45,7 +45,7 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				delta.addedNodes.length = delta.removedNodes.length = 0
 				timeout = null
 			}
-			
+
 
 			$scope.contentWindow = $element.find('.contentframe')[0].contentWindow;
 			$scope.glasspane = $element.find('.contentframe-overlay')[0];
@@ -71,6 +71,25 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				return eventCallback;
 			}
 			
+			//returns the ghost object with the specified uuid
+			$scope.getGhost = function (uuid) {
+				for (i = 0; i< $scope.ghosts.ghostContainers.length; i++) {
+					for (j = 0; j< $scope.ghosts.ghostContainers[i].ghosts.length; j++){
+						if ($scope.ghosts.ghostContainers[i].ghosts[j].uuid == uuid)
+							return $scope.ghosts.ghostContainers[i].ghosts[j];
+					}
+				}
+				return null;
+			}
+			//returns an array of objects for the specified container uuid
+			$scope.getContainedGhosts = function (uuid) {
+				for (i = 0; i< $scope.ghosts.ghostContainers.length; i++) {
+					if ($scope.ghosts.ghostContainers[i].uuid == uuid)
+						return $scope.ghosts.ghostContainers[i].ghosts;
+				}
+				return null;
+			}
+
 			$scope.unregisterDOMEvent = function(eventType, target,callback) {
 				if (target == "FORM") {
 					$($scope.contentDocument).off(eventType,null,callback)
@@ -90,7 +109,7 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 					$($element.find('.palette')[0]).off(eventType,null,callback);
 				}
 			}
-			
+
 			$scope.convertToContentPoint = function(point){
 				var frameRect = $element.find('.contentframe')[0].getBoundingClientRect()
 				if (point.x && point.y)
@@ -104,16 +123,16 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				}
 				return point
 			}
-			
+
 			$scope.getSelection = function() {
 				//Returning a copy so selection can't be changed my modifying the selection array
 				return selection.slice(0)
 			}
-		
+
 			$scope.extendSelection = function(nodes) {
 				var ar = Array.isArray(nodes) ? nodes : [nodes]
 				var dirty = false
-				
+
 				for (var i = 0; i < ar.length; i++) {
 					if (selection.indexOf(ar[i]) === -1) {
 						dirty = true
@@ -125,7 +144,7 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 					markDirty()
 				}
 			}
-		
+
 			$scope.reduceSelection = function(nodes) {
 				var ar = Array.isArray(nodes) ? nodes : [nodes]
 				var dirty = false
@@ -146,36 +165,36 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				var dirty = ar.length||selection.length
 				Array.prototype.push.apply(delta.removedNodes, selection)
 				selection.length = 0
-				
+
 				Array.prototype.push.apply(delta.addedNodes, ar)
 				Array.prototype.push.apply(selection, ar)
-				
+
 				if (dirty) {
 					markDirty()
 				}
 			}
-			
+
 			$scope.getFormLayout = function() {
 				return formLayout;
 			}
-			
+
 			$scope.getFormState = function() {
 				return servoyInternal.initFormState(formName); // this is a normal direct get if no init config is given
 			}
-			
+
 			$scope.refreshEditorContent = function() {
 				if (editorContentRootScope) {
 					editorContentRootScope.$digest();
 					$rootScope.$broadcast(EDITOR_EVENTS.SELECTION_CHANGED,selection)
 				}
 			}
-			
+
 			$scope.getEditorContentRootScope = function() {
 				return editorContentRootScope;
 			}
-			
+
 			$scope.contentStyle = {width: "100%", height: "100%"};
-			
+
 			$scope.setContentSize = function(width, height) {
 				$scope.contentStyle.width = width;
 				$scope.contentStyle.height = height;
@@ -188,31 +207,40 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				return (size.width == "100%") && (size.height == "100%");
 			}
 			
+			$scope.setCursorStyle = function(cursor) {
+				$scope.glasspane.style.cursor = cursor;
+			}
+
+
 			$element.on('documentReady.content', function(event, contentDocument) {
 				$scope.contentDocument = contentDocument;
 				$pluginRegistry.registerEditor($scope);
-				
+
 				var htmlTag = $scope.contentDocument.getElementsByTagName("html")[0];
 				var injector = $scope.contentWindow.angular.element(htmlTag).injector();
 				editorContentRootScope = injector.get("$rootScope");
 				servoyInternal = injector.get("$servoyInternal");
 				$scope.glasspane.focus()
 				$(function(){   
-				    $(document).keydown(function(objEvent) {   
-				        // disable select-all  
-				        if (objEvent.ctrlKey) {          
-				            if (objEvent.keyCode == 65) {                         
-				                return false;
-				            }            
-				        }
-				        else if (objEvent.keyCode == 46) {
-				            // send the DELETE key code to the server
-				        	$editorService.keyPressed(objEvent);
-				        }
-				    });
+					$(document).keydown(function(objEvent) {   
+						// disable select-all  
+						if (objEvent.ctrlKey) {          
+							if (objEvent.keyCode == 65) {                         
+								return false;
+							}            
+						}
+						else if (objEvent.keyCode == 46) {
+							// send the DELETE key code to the server
+							$editorService.keyPressed(objEvent);
+						}
+					});
 				});  
+				var promise = $editorService.getGhostComponents({"resetPosition":true});
+				promise.then(function (result){
+					$scope.ghosts = result;
+				});
 			});
-			
+
 
 			$element.on('renderDecorators.content', function(event) {
 				// TODO this is now in a timeout to let the editor-content be able to reload the form.
@@ -220,7 +248,13 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				// maybe the form controllers code could call $evalAsync as last thing in its controller when it is in design.
 				if (selection.length > 0) {
 					$timeout(function() {
-						var nodes = $scope.contentDocument.querySelectorAll("[svy-id]")
+						var promise = $editorService.getGhostComponents();//no parameter, then the ghosts are not repositioned
+						promise.then(function (result){
+							$scope.ghosts = result;
+						});
+						var nodes = $scope.contentDocument.querySelectorAll("[svy-id]");
+						var ghosts = $scope.glasspane.querySelectorAll("[svy-id]");
+						nodes = nodes.concat(ghosts);
 						var matchedElements = []
 						for (var i = 0; i < nodes.length; i++) {
 							var element = nodes[i]
@@ -233,10 +267,11 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 						}
 						selection = matchedElements;
 						$rootScope.$broadcast(EDITOR_EVENTS.SELECTION_CHANGED,selection)
+
 					},100)
 				}
 			});
-			
+
 			$editorService.registerEditor($scope);
 			var promise = $editorService.connect();
 			promise.then(function() {
@@ -245,11 +280,11 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				if (value) replacews = "&replacewebsocket=true";
 				$scope.contentframe = "editor-content.html?endpoint=designclient&id=%23" + $element.attr("id") + "&f=" +formName +"&s=" + $editorService.getURLParameter("s") + replacews;
 			})
-	      },
-	      templateUrl: 'templates/editor.html',
-	      replace: true
-	    };
-	
+		},
+		templateUrl: 'templates/editor.html',
+		replace: true
+	};
+
 }).factory("$editorService", function($rootScope, $webSocket, $log, $q,$window, EDITOR_EVENTS, $rootScope,$timeout) {
 	var realConsole = $window.console;
 	$window.console = {
@@ -261,7 +296,7 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 					realConsole.log(msg)
 				}
 				else alert(msg);
-				
+
 			},
 			error: function(msg) {
 				if (typeof(consoleLog) != "undefined") {
@@ -276,7 +311,7 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 	var wsSession = null;
 	var connected = false;
 	var deferred = null;
-	
+
 	function getURLParameter(name) {
 		return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec($window.location.search)||[,""])[1].replace(/\+/g, '%20'))||null
 	}
@@ -287,7 +322,7 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 			{
 				WebSocket = SwtWebSocket
 				var $currentSwtWebsockets = [];
-				
+
 				$window.addWebSocket = function(socket) {
 					var id = $currentSwtWebsockets.length;
 					$currentSwtWebsockets[id] = socket;
@@ -340,10 +375,10 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 			connected = true;
 			if (deferred) deferred.resolve();
 			deferred = null;
-			
+
 		}
 	}
-	
+
 	$rootScope.$on(EDITOR_EVENTS.SELECTION_CHANGED, function(event, selection) {
 		var sel = []
 		for(var i=0;i<selection.length;i++) {
@@ -367,21 +402,25 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 			}
 			return promise;
 		},
-		
+
 		keyPressed: function(event) {
 			wsSession.callService('formeditor', 'keyPressed', {ctrl:event.ctrlKey,shift:event.shiftKey,alt:event.altKey,keyCode:event.keyCode}, true)
 		},
-		
+
 		sendChanges: function(properties) {
 			wsSession.callService('formeditor', 'setProperties', properties, true)
 		},
-		
+
 		createComponent: function(component) {
 			wsSession.callService('formeditor', 'createComponent', component, true)
 		},
-		
+
+		getGhostComponents: function(node) {
+			return wsSession.callService('formeditor', 'getGhostComponents', node, false)
+		},
+
 		getURLParameter: getURLParameter,
-		
+
 		updateSelection: function(ids) {
 			var prevSelection = editorScope.getSelection();
 			var changed = false;
@@ -397,9 +436,12 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 					}
 				}
 			}
+			else if (prevSelection.length > 0) {
+				changed = true;
+			}
 			if (changed) editorScope.setSelection(selection);
-		}
-	
-	// add more service methods here
+		},
+		
+		// add more service methods here
 	}
 });

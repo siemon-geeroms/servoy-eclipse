@@ -9,6 +9,9 @@ angular.module("decorators",['editor','margin','resizeknobs']).directive("decora
 				mousePosition.top  += parseInt(angular.element($scope.glasspane.parentElement).css("padding-top").replace("px",""));
 				return mousePosition;
 			}
+			function hasClass(element, cls) {
+				return (' ' + element.className + ' ').indexOf(' ' + cls + ' ') > -1;
+			}
 			function renderDecorators(selection) {
 				selection.forEach(function(value, index, array) {
 					var currentNode = $scope.nodes[index];
@@ -33,12 +36,20 @@ angular.module("decorators",['editor','margin','resizeknobs']).directive("decora
 					
 					currentNode.name =  node.attr('name');
 					currentNode.node = node;
-					var offset = node.offset()
+					var offset = node.offset();
+					
+					//this is so that ghost elements decorators are positioned correctly
+					if(node.parent().hasClass("ghostcontainer")) {
+						offset.top -= node.parent().parent().offset().top;
+						offset.left -= node.parent().parent().offset().left;
+					}
+					
 					var x = (window.pageXOffset !== undefined) ? window.pageXOffset : (document.documentElement || document.body.parentNode || document.body).scrollLeft;
 					var y = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
 					offset.top -= y;
 					offset.left -= x;
-					offset = adjustForPadding(offset)
+					if (!hasClass(node.context,"ghost"))
+						offset = adjustForPadding(offset)
 					currentNode.style = {
 						height: height,
 						width: width,

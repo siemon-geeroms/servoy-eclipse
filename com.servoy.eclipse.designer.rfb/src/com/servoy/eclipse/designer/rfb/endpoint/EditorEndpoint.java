@@ -72,11 +72,11 @@ public class EditorEndpoint extends WebsocketEndpoint
 	{
 		if (t instanceof IOException)
 		{
-			log.error("IOException happend", t.getMessage()); // TODO if it has no message but has a 'cause' it will not print anything useful
+			log.error("IOException happened", t.getMessage()); // TODO if it has no message but has a 'cause' it will not print anything useful
 		}
 		else
 		{
-			log.error("Exception happend", t);
+			log.error("IOException happened", t);
 		}
 	}
 }

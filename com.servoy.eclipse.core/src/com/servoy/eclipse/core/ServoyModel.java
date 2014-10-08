@@ -110,6 +110,8 @@ import org.webbitserver.HttpHandler;
 import org.webbitserver.HttpRequest;
 import org.webbitserver.HttpResponse;
 
+import sj.jsonschemavalidation.builder.JsonSchemaValidationNature;
+
 import com.servoy.eclipse.core.quickfix.ChangeResourcesProjectQuickFix.ResourcesProjectSetupJob;
 import com.servoy.eclipse.core.repository.EclipseUserManager;
 import com.servoy.eclipse.core.repository.SwitchableEclipseUserManager;
@@ -192,13 +194,13 @@ import com.servoy.j2db.util.Utils;
 
 /**
  * models servoy as JavaModel in eclipse
- * 
+ *
  * @author jblok
  */
 public class ServoyModel extends AbstractServoyModel
 {
 	/**
-	 * 
+	 *
 	 */
 	public static final String SERVOY_WORKING_SET_ID = "com.servoy.eclipse.core.ServoyWorkingSet";
 
@@ -504,7 +506,7 @@ public class ServoyModel extends AbstractServoyModel
 										}
 									}
 									else
-									// remove not updated projects										
+									// remove not updated projects
 									{
 										Solution editingSolution = activeProject.getEditingSolution();
 										if (editingSolution != null)
@@ -962,7 +964,7 @@ public class ServoyModel extends AbstractServoyModel
 
 	/**
 	 * Returns the root object with the given name. string resources are read from the resources project referenced by the current active solution project.
-	 * 
+	 *
 	 * @param name the name of the object.
 	 * @return the root object with the given name.
 	 */
@@ -991,7 +993,7 @@ public class ServoyModel extends AbstractServoyModel
 
 	/**
 	 * Returns the style with the given rootObjectId. Styles are read from the styles project referenced by the current active solution project.
-	 * 
+	 *
 	 * @param rootObjectId the rootObjectId of the style.
 	 * @return the style with the given name.
 	 */
@@ -1020,7 +1022,7 @@ public class ServoyModel extends AbstractServoyModel
 
 	/**
 	 * Returns a list with all styles. Styles are read from the styles project referenced by the current active solution project.
-	 * 
+	 *
 	 * @return the style with the given name.
 	 */
 	public List<IRootObject> getActiveRootObjects(int type)
@@ -1399,6 +1401,24 @@ public class ServoyModel extends AbstractServoyModel
 							sequenceProvider = new EclipseSequenceProvider(dataModelManager);
 							readWorkingSetsFromResourcesProject();
 							activeResourcesProject.setListeners(workingSetChangedListeners);
+
+							try
+							{
+								if (!activeResourcesProject.getProject().hasNature(JsonSchemaValidationNature.NATURE_ID))
+								{
+									IProjectDescription description = activeResourcesProject.getProject().getDescription();
+									String[] natures = description.getNatureIds();
+									String[] newNatures = new String[natures.length + 1];
+									System.arraycopy(natures, 0, newNatures, 0, natures.length);
+									newNatures[natures.length] = JsonSchemaValidationNature.NATURE_ID;
+									description.setNatureIds(newNatures);
+									activeResourcesProject.getProject().setDescription(description, null);
+								}
+							}
+							catch (CoreException e)
+							{
+								ServoyLog.logError(e);
+							}
 						}
 						else
 						{
@@ -1654,7 +1674,7 @@ public class ServoyModel extends AbstractServoyModel
 
 		if (isActiveSolutionMobile())
 		{
-			// the enablement/disablement logic of mobile launch toolbar button is in the  exporter plugin 
+			// the enablement/disablement logic of mobile launch toolbar button is in the  exporter plugin
 			// (the button is disabled by default)
 			Platform.getPlugin("com.servoy.eclipse.exporter.mobile");
 		}
@@ -1789,7 +1809,7 @@ public class ServoyModel extends AbstractServoyModel
 
 	/**
 	 * Create the refresh job for the receiver.
-	 * 
+	 *
 	 */
 	private Job createFireRealPersistchangesJob()
 	{
@@ -1797,7 +1817,7 @@ public class ServoyModel extends AbstractServoyModel
 		{
 			/*
 			 * (non-Javadoc)
-			 * 
+			 *
 			 * @see org.eclipse.ui.progress.UIJob#runInUIThread(org.eclipse.core.runtime.IProgressMonitor)
 			 */
 			@Override
@@ -1912,7 +1932,7 @@ public class ServoyModel extends AbstractServoyModel
 
 	/**
 	 * Notify listeners of changes to persists. Changes can be notified for the real solutions or the editing solutions.
-	 * 
+	 *
 	 * @param realSolution
 	 * @param changes
 	 */
@@ -2871,7 +2891,11 @@ public class ServoyModel extends AbstractServoyModel
 			IFile file = (IFile)fileRd.getResource();
 			if (file.getName().endsWith(SolutionSerializer.STYLE_FILE_EXTENSION))
 			{
-				styleFiles.add(fileRd);
+				if (!file.getProjectRelativePath().segment(0).equals(SolutionSerializer.COMPONENTS_DIR_NAME) &&
+					!file.getProjectRelativePath().segment(0).equals(SolutionSerializer.SERVICES_DIR_NAME))
+				{
+					styleFiles.add(fileRd);
+				}
 			}
 			else if (file.getName().endsWith(SolutionSerializer.TEMPLATE_FILE_EXTENSION))
 			{

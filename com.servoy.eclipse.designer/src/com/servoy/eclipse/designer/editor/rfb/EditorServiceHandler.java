@@ -20,8 +20,10 @@ package com.servoy.eclipse.designer.editor.rfb;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.gef.commands.CompoundCommand;
@@ -195,10 +197,11 @@ public class EditorServiceHandler implements IServerService
 			if ("setSelection".equals(methodName))
 			{
 				JSONArray json = args.getJSONArray("selection");
-				final Object[] selection = new Object[json.length()];
+				final List<Object> selection = new ArrayList<Object>();
 				for (int i = 0; i < json.length(); i++)
 				{
-					selection[i] = ModelUtils.getEditingFlattenedSolution(editorPart.getForm()).searchPersist(UUID.fromString(json.getString(i)));
+					IPersist searchPersist = ModelUtils.getEditingFlattenedSolution(editorPart.getForm()).searchPersist(UUID.fromString(json.getString(i)));
+					if (searchPersist != null) selection.add(searchPersist);
 				}
 				Display.getDefault().asyncExec(new Runnable()
 				{
@@ -206,7 +209,7 @@ public class EditorServiceHandler implements IServerService
 					{
 						IStructuredSelection structuredSelection = new StructuredSelection(selection);
 						selectionListener.setLastSelection(structuredSelection);
-						selectionProvider.setSelection(selection.length == 0 ? null : structuredSelection);
+						selectionProvider.setSelection(selection.size() == 0 ? null : structuredSelection);
 					}
 				});
 			}
@@ -274,223 +277,20 @@ public class EditorServiceHandler implements IServerService
 							{
 								try
 								{
-									int x = args.getInt("x");
-									int y = args.getInt("y");
-									if (args.has("type"))
-									{//a ghost dragged from the pallete. it is defined in the "types" section of the .spec file
-										Iterator<IPersist> allPersists = editorPart.getForm().getAllObjects();
-										while (allPersists.hasNext())
-										{
-											IPersist next = allPersists.next();
-											if (next instanceof ISupportChilds)
-											{
-												ISupportChilds iSupportChilds = (ISupportChilds)next;
-												if (next instanceof BaseComponent)
-												{
-													if (isCorrectTarget(((BaseComponent)next), (String)args.get("dropTargetUUID")))
-													{
-														if (args.getString("type").equals("tab"))
-														{
-															Tab newTab = (Tab)editorPart.getForm().getRootObject().getChangeHandler().createNewObject(
-																iSupportChilds, IRepository.TABS);
-															String tabName = "tab_" + id.incrementAndGet();
-															while (!checkName(tabName))
-															{
-																tabName = "tab_" + id.incrementAndGet();
-															}
-															newTab.setText(tabName);
-															newTab.setLocation(new Point(x - ((BaseComponent)next).getLocation().x, y -
-																((BaseComponent)next).getLocation().y));
-															iSupportChilds.addChild(newTab);
-															newPersist = next;
-														}
-													}
-												}
-											}
-										}
-									}
-									else if (args.has("name"))
+									newPersist = createComponent(args);
+									if (newPersist != null)
 									{
-										String name = args.getString("name");
-										if ("servoydefault-button".equals(name))
-										{
-											GraphicalComponent gc = editorPart.getForm().createNewGraphicalComponent(new Point(x, y));
-											gc.setText("button");
-											gc.setOnActionMethodID(-1);
-											newPersist = gc;
-										}
-										else if ("servoydefault-label".equals(name))
-										{
-											GraphicalComponent gc = editorPart.getForm().createNewGraphicalComponent(new Point(x, y));
-											gc.setText("label");
-											newPersist = gc;
-										}
-										else if ("servoydefault-combobox".equals(name))
-										{
-											Field field = editorPart.getForm().createNewField(new Point(x, y));
-											field.setDisplayType(Field.COMBOBOX);
-											newPersist = field;
-										}
-										else if ("servoydefault-textfield".equals(name))
-										{
-											Field field = editorPart.getForm().createNewField(new Point(x, y));
-											field.setDisplayType(Field.TEXT_FIELD);
-											newPersist = field;
-										}
-										else if ("servoydefault-textarea".equals(name))
-										{
-											Field field = editorPart.getForm().createNewField(new Point(x, y));
-											field.setDisplayType(Field.TEXT_AREA);
-											newPersist = field;
-										}
-										else if ("servoydefault-password".equals(name))
-										{
-											Field field = editorPart.getForm().createNewField(new Point(x, y));
-											field.setDisplayType(Field.PASSWORD);
-											newPersist = field;
-										}
-										else if ("servoydefault-calendar".equals(name))
-										{
-											Field field = editorPart.getForm().createNewField(new Point(x, y));
-											field.setDisplayType(Field.CALENDAR);
-											newPersist = field;
-										}
-										else if ("servoydefault-typeahead".equals(name))
-										{
-											Field field = editorPart.getForm().createNewField(new Point(x, y));
-											field.setDisplayType(Field.TYPE_AHEAD);
-											newPersist = field;
-										}
-										else if ("servoydefault-spinner".equals(name))
-										{
-											Field field = editorPart.getForm().createNewField(new Point(x, y));
-											field.setDisplayType(Field.SPINNER);
-											newPersist = field;
-										}
-										else if ("servoydefault-check".equals(name) || "servoydefault-checkgroup".equals(name))
-										{
-											Field field = editorPart.getForm().createNewField(new Point(x, y));
-											field.setDisplayType(Field.CHECKS);
-											newPersist = field;
-										}
-										else if ("servoydefault-radio".equals(name) || "servoydefault-radiogroup".equals(name))
-										{
-											Field field = editorPart.getForm().createNewField(new Point(x, y));
-											field.setDisplayType(Field.RADIOS);
-											newPersist = field;
-										}
-										else if ("servoydefault-imagemedia".equals(name))
-										{
-											Field field = editorPart.getForm().createNewField(new Point(x, y));
-											field.setDisplayType(Field.IMAGE_MEDIA);
-											newPersist = field;
-										}
-										else if ("servoydefault-listbox".equals(name))
-										{
-											Field field = editorPart.getForm().createNewField(new Point(x, y));
-											field.setDisplayType(Field.LIST_BOX);
-											newPersist = field;
-										}
-										else if ("servoydefault-htmlarea".equals(name))
-										{
-											Field field = editorPart.getForm().createNewField(new Point(x, y));
-											field.setDisplayType(Field.HTML_AREA);
-											field.setEditable(false);
-											newPersist = field;
-										}
-										else if ("servoydefault-tabpanel".equals(name))
-										{
-											String compName = "tabpanel_" + id.incrementAndGet();
-											while (!checkName(compName))
-											{
-												compName = "tabpanel_" + id.incrementAndGet();
-											}
-											TabPanel tabPanel = editorPart.getForm().createNewTabPanel(compName);
-											tabPanel.setLocation(new Point(x, y));
-											newPersist = tabPanel;
-										}
-										else if ("servoydefault-splitpane".equals(name))
-										{
-											String compName = "tabpanel_" + id.incrementAndGet();
-											while (!checkName(compName))
-											{
-												compName = "tabpanel_" + id.incrementAndGet();
-											}
-											TabPanel tabPanel = editorPart.getForm().createNewTabPanel(compName);
-											tabPanel.setLocation(new Point(x, y));
-											tabPanel.setTabOrientation(TabPanel.SPLIT_HORIZONTAL);
-											newPersist = tabPanel;
-										}
-										else if ("servoydefault-portal".equals(name))
-										{
-											String compName = "portal_" + id.incrementAndGet();
-											while (!checkName(compName))
-											{
-												compName = "portal_" + id.incrementAndGet();
-											}
-											Portal portal = editorPart.getForm().createNewPortal(compName, new Point(x, y));
-											newPersist = portal;
-										}
-										else if ("servoydefault-rectangle".equals(name))
-										{
-											RectShape shape = editorPart.getForm().createNewRectangle(new Point(x, y));
-											shape.setLineSize(1);
-											newPersist = shape;
-										}
-										else
-										{
-											// bean
-											String compName = "bean_" + id.incrementAndGet();
-											while (!checkName(compName))
-											{
-												compName = "bean_" + id.incrementAndGet();
-											}
-											Bean bean = editorPart.getForm().createNewBean(compName, name);
-											bean.setLocation(new Point(x, y));
-											newPersist = bean;
-										}
+										ServoyModelManager.getServoyModelManager().getServoyModel().firePersistsChanged(false,
+											Arrays.asList(new IPersist[] { newPersist }));
+										Object[] selection = new Object[] { newPersist };
+										IStructuredSelection structuredSelection = new StructuredSelection(selection);
+										selectionProvider.setSelection(structuredSelection);
 									}
-									else if (args.has("uuid"))
-									{
-										IPersist persist = editorPart.getForm().getChild(UUID.fromString(args.getString("uuid")));
-										if (persist instanceof AbstractBase)
-										{
-											IValidateName validator = ServoyModelManager.getServoyModelManager().getServoyModel().getNameValidator();
-											newPersist = ((AbstractBase)persist).cloneObj(persist.getParent(), true, validator, true, true, true);
-											((ISupportBounds)newPersist).setLocation(new Point(x, y));
-										}
-									}
-									ServoyModelManager.getServoyModelManager().getServoyModel().firePersistsChanged(false,
-										Arrays.asList(new IPersist[] { newPersist }));
-									Object[] selection = new Object[] { newPersist };
-									IStructuredSelection structuredSelection = new StructuredSelection(selection);
-									selectionProvider.setSelection(structuredSelection);
 								}
 								catch (Exception ex)
 								{
 									Debug.error(ex);
 								}
-							}
-
-							private boolean isCorrectTarget(BaseComponent baseComponent, String uuid)
-							{
-								return baseComponent.getUUID().toString().equals(uuid);
-							}
-
-							/**
-							 * @param compName
-							 */
-							private boolean checkName(String compName)
-							{
-								Iterator<IFormElement> fields = editorPart.getForm().getFormElementsSortedByFormIndex();
-								for (IFormElement element : Utils.iterate(fields))
-								{
-									if (compName.equals(element.getName()))
-									{
-										return false;
-									}
-								}
-								return true;
 							}
 
 							@Override
@@ -515,12 +315,297 @@ public class EditorServiceHandler implements IServerService
 					}
 				});
 			}
+			else if ("createComponents".equals(methodName))
+			{
+				Display.getDefault().asyncExec(new Runnable()
+				{
+					public void run()
+					{
+						editorPart.getCommandStack().execute(new BaseRestorableCommand("createComponents")
+						{
+							private List<IPersist> newPersists;
+
+							@Override
+							public void execute()
+							{
+								try
+								{
+									if (args.has("components"))
+									{
+										JSONArray components = args.getJSONArray("components");
+										newPersists = new ArrayList<IPersist>();
+										for (int i = 0; i < components.length(); i++)
+										{
+											IPersist persist = createComponent(components.getJSONObject(i));
+											if (persist != null)
+											{
+												newPersists.add(persist);
+											}
+											else
+											{
+												Debug.error("Could not create the component " + components.getJSONObject(i).toString());
+											}
+										}
+									}
+									if (newPersists != null)
+									{
+										ServoyModelManager.getServoyModelManager().getServoyModel().firePersistsChanged(false, newPersists);
+										IStructuredSelection structuredSelection = new StructuredSelection(newPersists);
+										selectionProvider.setSelection(structuredSelection);
+									}
+								}
+								catch (Exception ex)
+								{
+									Debug.error(ex);
+								}
+							}
+
+							@Override
+							public void undo()
+							{
+								try
+								{
+									if (newPersists != null)
+									{
+										for (IPersist persist : newPersists)
+										{
+											((IDeveloperRepository)persist.getRootObject().getRepository()).deleteObject(persist);
+										}
+										ServoyModelManager.getServoyModelManager().getServoyModel().firePersistsChanged(false, newPersists);
+									}
+								}
+								catch (RepositoryException e)
+								{
+									ServoyLog.logError("Could not undo create elements", e);
+								}
+							}
+
+						});
+					}
+				});
+			}
 		}
 		catch (JSONException e)
 		{
 			ServoyLog.logError(e);
 		}
 
+		return null;
+	}
+
+	private boolean isCorrectTarget(BaseComponent baseComponent, String uuid)
+	{
+		return baseComponent.getUUID().toString().equals(uuid);
+	}
+
+	/**
+	 * @param compName
+	 */
+	private boolean checkName(String compName)
+	{
+		Iterator<IFormElement> fields = editorPart.getForm().getFormElementsSortedByFormIndex();
+		for (IFormElement element : Utils.iterate(fields))
+		{
+			if (compName.equals(element.getName()))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * @param args
+	 * @throws JSONException
+	 * @throws RepositoryException
+	 */
+	private IPersist createComponent(final JSONObject args) throws JSONException, RepositoryException
+	{
+		int x = args.getInt("x");
+		int y = args.getInt("y");
+		if (args.has("type"))
+		{//a ghost dragged from the pallete. it is defined in the "types" section of the .spec file
+			Iterator<IPersist> allPersists = editorPart.getForm().getAllObjects();
+			while (allPersists.hasNext())
+			{
+				IPersist next = allPersists.next();
+				if (next instanceof ISupportChilds)
+				{
+					ISupportChilds iSupportChilds = (ISupportChilds)next;
+					if (next instanceof BaseComponent)
+					{
+						if (isCorrectTarget(((BaseComponent)next), (String)args.get("dropTargetUUID")))
+						{
+							if (args.getString("type").equals("tab"))
+							{
+								Tab newTab = (Tab)editorPart.getForm().getRootObject().getChangeHandler().createNewObject(iSupportChilds, IRepository.TABS);
+								String tabName = "tab_" + id.incrementAndGet();
+								while (!checkName(tabName))
+								{
+									tabName = "tab_" + id.incrementAndGet();
+								}
+								newTab.setText(tabName);
+								newTab.setLocation(new Point(x - ((BaseComponent)next).getLocation().x, y - ((BaseComponent)next).getLocation().y));
+								iSupportChilds.addChild(newTab);
+								return next;
+							}
+						}
+					}
+				}
+			}
+		}
+		else if (args.has("name"))
+		{
+			String name = args.getString("name");
+			if ("servoydefault-button".equals(name))
+			{
+				GraphicalComponent gc = editorPart.getForm().createNewGraphicalComponent(new Point(x, y));
+				gc.setText("button");
+				gc.setOnActionMethodID(-1);
+				return gc;
+			}
+			else if ("servoydefault-label".equals(name))
+			{
+				GraphicalComponent gc = editorPart.getForm().createNewGraphicalComponent(new Point(x, y));
+				gc.setText("label");
+				return gc;
+			}
+			else if ("servoydefault-combobox".equals(name))
+			{
+				Field field = editorPart.getForm().createNewField(new Point(x, y));
+				field.setDisplayType(Field.COMBOBOX);
+				return field;
+			}
+			else if ("servoydefault-textfield".equals(name))
+			{
+				Field field = editorPart.getForm().createNewField(new Point(x, y));
+				field.setDisplayType(Field.TEXT_FIELD);
+				return field;
+			}
+			else if ("servoydefault-textarea".equals(name))
+			{
+				Field field = editorPart.getForm().createNewField(new Point(x, y));
+				field.setDisplayType(Field.TEXT_AREA);
+				return field;
+			}
+			else if ("servoydefault-password".equals(name))
+			{
+				Field field = editorPart.getForm().createNewField(new Point(x, y));
+				field.setDisplayType(Field.PASSWORD);
+				return field;
+			}
+			else if ("servoydefault-calendar".equals(name))
+			{
+				Field field = editorPart.getForm().createNewField(new Point(x, y));
+				field.setDisplayType(Field.CALENDAR);
+				return field;
+			}
+			else if ("servoydefault-typeahead".equals(name))
+			{
+				Field field = editorPart.getForm().createNewField(new Point(x, y));
+				field.setDisplayType(Field.TYPE_AHEAD);
+				return field;
+			}
+			else if ("servoydefault-spinner".equals(name))
+			{
+				Field field = editorPart.getForm().createNewField(new Point(x, y));
+				field.setDisplayType(Field.SPINNER);
+				return field;
+			}
+			else if ("servoydefault-check".equals(name) || "servoydefault-checkgroup".equals(name))
+			{
+				Field field = editorPart.getForm().createNewField(new Point(x, y));
+				field.setDisplayType(Field.CHECKS);
+				return field;
+			}
+			else if ("servoydefault-radio".equals(name) || "servoydefault-radiogroup".equals(name))
+			{
+				Field field = editorPart.getForm().createNewField(new Point(x, y));
+				field.setDisplayType(Field.RADIOS);
+				return field;
+			}
+			else if ("servoydefault-imagemedia".equals(name))
+			{
+				Field field = editorPart.getForm().createNewField(new Point(x, y));
+				field.setDisplayType(Field.IMAGE_MEDIA);
+				return field;
+			}
+			else if ("servoydefault-listbox".equals(name))
+			{
+				Field field = editorPart.getForm().createNewField(new Point(x, y));
+				field.setDisplayType(Field.LIST_BOX);
+				return field;
+			}
+			else if ("servoydefault-htmlarea".equals(name))
+			{
+				Field field = editorPart.getForm().createNewField(new Point(x, y));
+				field.setDisplayType(Field.HTML_AREA);
+				field.setEditable(false);
+				return field;
+			}
+			else if ("servoydefault-tabpanel".equals(name))
+			{
+				String compName = "tabpanel_" + id.incrementAndGet();
+				while (!checkName(compName))
+				{
+					compName = "tabpanel_" + id.incrementAndGet();
+				}
+				TabPanel tabPanel = editorPart.getForm().createNewTabPanel(compName);
+				tabPanel.setLocation(new Point(x, y));
+				return tabPanel;
+			}
+			else if ("servoydefault-splitpane".equals(name))
+			{
+				String compName = "tabpanel_" + id.incrementAndGet();
+				while (!checkName(compName))
+				{
+					compName = "tabpanel_" + id.incrementAndGet();
+				}
+				TabPanel tabPanel = editorPart.getForm().createNewTabPanel(compName);
+				tabPanel.setLocation(new Point(x, y));
+				tabPanel.setTabOrientation(TabPanel.SPLIT_HORIZONTAL);
+				return tabPanel;
+			}
+			else if ("servoydefault-portal".equals(name))
+			{
+				String compName = "portal_" + id.incrementAndGet();
+				while (!checkName(compName))
+				{
+					compName = "portal_" + id.incrementAndGet();
+				}
+				Portal portal = editorPart.getForm().createNewPortal(compName, new Point(x, y));
+				return portal;
+			}
+			else if ("servoydefault-rectangle".equals(name))
+			{
+				RectShape shape = editorPart.getForm().createNewRectangle(new Point(x, y));
+				shape.setLineSize(1);
+				return shape;
+			}
+			else
+			{
+				// bean
+				String compName = "bean_" + id.incrementAndGet();
+				while (!checkName(compName))
+				{
+					compName = "bean_" + id.incrementAndGet();
+				}
+				Bean bean = editorPart.getForm().createNewBean(compName, name);
+				bean.setLocation(new Point(x, y));
+				return bean;
+			}
+		}
+		else if (args.has("uuid"))
+		{
+			IPersist persist = editorPart.getForm().getChild(UUID.fromString(args.getString("uuid")));
+			if (persist instanceof AbstractBase)
+			{
+				IValidateName validator = ServoyModelManager.getServoyModelManager().getServoyModel().getNameValidator();
+				IPersist newPersist = ((AbstractBase)persist).cloneObj(persist.getParent(), true, validator, true, true, true);
+				((ISupportBounds)newPersist).setLocation(new Point(x, y));
+				return newPersist;
+			}
+		}
 		return null;
 	}
 }

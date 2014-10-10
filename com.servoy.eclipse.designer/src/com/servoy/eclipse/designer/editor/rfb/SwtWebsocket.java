@@ -39,6 +39,7 @@ import javax.websocket.RemoteEndpoint.Async;
 import javax.websocket.RemoteEndpoint.Basic;
 import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
+import javax.websocket.server.ServerEndpoint;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.eclipse.swt.browser.Browser;
@@ -56,19 +57,23 @@ import com.servoy.j2db.util.Debug;
  */
 public class SwtWebsocket
 {
-	private final EditorEndpoint /* WebsocketEndpoint */websocketEndpoint;
+	private final EditorEndpoint websocketEndpoint;
 
 	public SwtWebsocket(Browser browser, String uriString, int id) throws Exception
 	{
-		// @ServerEndpoint(value = "/websocket/{endpointType}/{sessionid}/{windowid}/{argument}")
-		String[] split = uriString.split("/");
-		if (split.length < 5 || !"websocket".equals(split[split.length - 5]))
+		// expecting ws://localhost:8080/rfb/websocket/nnnnnnnn-nnnn-nnnn-nnnn-nnnnnnnnnnnn
+
+		String endpointPath = EditorEndpoint.class.getAnnotation(ServerEndpoint.class).value();
+		//  strip everything off before first argument /rfb/websocket/{editorid}
+		String[] args = uriString.substring(uriString.indexOf(endpointPath.substring(0, endpointPath.indexOf('{'))) + endpointPath.length()).split("/");
+
+		if (args.length != 1)
 		{
 			throw new IllegalArgumentException(uriString);
 		}
 
 		websocketEndpoint = new EditorEndpoint();
-		websocketEndpoint.start(new SwtWebSocketSession(browser, id), "theeditorid");
+		websocketEndpoint.start(new SwtWebSocketSession(browser, id), args[0]);
 	}
 
 	private void send(String string)

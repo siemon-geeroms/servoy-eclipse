@@ -461,7 +461,7 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				return;
 			}
 		}
-		wsSession = $webSocket.connect('editor', getURLParameter('editorid'))
+		wsSession = $webSocket.connect('/angular', [getURLParameter('editorid')])
 		wsSession.onopen = function()
 		{
 			connected = true;

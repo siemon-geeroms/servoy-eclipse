@@ -36,7 +36,7 @@ import org.sablo.websocket.WebsocketEndpoint;
  *
  */
 
-@ServerEndpoint(value = "/websocket/rfb/{editorid}")
+@ServerEndpoint(value = "/rfb/websocket/{editorid}")
 public class EditorEndpoint extends WebsocketEndpoint
 {
 	public static final String EDITOR_ENDPOINT = "editor";

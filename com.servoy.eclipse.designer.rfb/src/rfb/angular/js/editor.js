@@ -370,7 +370,7 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				var replacews = "";
 				var value = $editorService.getURLParameter("replacewebsocket");
 				if (value) replacews = "&replacewebsocket=true";
-				$scope.contentframe = "editor-content.html?endpoint=designclient&id=%23" + $element.attr("id") + "&f=" +formName +"&s=" + $editorService.getURLParameter("s") + replacews;
+				$scope.contentframe = "content/editor-content.html?endpoint=designclient&id=%23" + $element.attr("id") + "&f=" +formName +"&s=" + $editorService.getURLParameter("s") + replacews;
 			})
 		},
 		templateUrl: 'templates/editor.html',
@@ -461,7 +461,7 @@ angular.module('editor', ['palette','toolbar','mouseselection',"dragselection",'
 				return;
 			}
 		}
-		wsSession = $webSocket.connect('/angular', [getURLParameter('editorid')])
+		wsSession = $webSocket.connect('', [getURLParameter('editorid')])
 		wsSession.onopen = function()
 		{
 			connected = true;

@@ -30,28 +30,31 @@ import javax.websocket.server.ServerEndpoint;
 
 import org.sablo.websocket.WebsocketEndpoint;
 
+import com.servoy.j2db.server.ngclient.WebsocketSessionFactory;
+
 /**
- * WebsocketEndpoint for the RFB Editor.
- * 
+ * RAGTEST doc
  * @author rgansevles
  *
  */
 
-@ServerEndpoint(value = "/rfb/angular/websocket/{editorid}")
-public class EditorEndpoint extends WebsocketEndpoint
+@ServerEndpoint(value = "/rfb/angular/content/websocket/{sessionid}/{windowid}/{solutionName}")
+public class EditorContentEndpoint extends WebsocketEndpoint
 {
-	public static final String EDITOR_ENDPOINT = "editor";
-
-	public EditorEndpoint()
+	// RAGTEST wssessiion factory voor design client
+	public EditorContentEndpoint()
 	{
-		super(EDITOR_ENDPOINT);
+		super(WebsocketSessionFactory.DESIGN_ENDPOINT);
 	}
 
+	@Override
 	@OnOpen
-	public void start(Session newSession, @PathParam("editorid")
-	String editorid) throws Exception
+	public void start(Session newSession, @PathParam("sessionid")
+	String sessionid, @PathParam("windowid")
+	final String windowid, @PathParam("solutionName")
+	final String solutionName) throws Exception
 	{
-		super.start(newSession, editorid, null, null);
+		super.start(newSession, sessionid, windowid, solutionName);
 	}
 
 	@Override

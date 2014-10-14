@@ -26,7 +26,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.eclipse.gef.EditPart;
+import org.eclipse.gef.EditPolicy;
 import org.eclipse.gef.commands.CompoundCommand;
+import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.StructuredSelection;
@@ -37,9 +40,20 @@ import org.json.JSONObject;
 import org.json.JSONWriter;
 import org.sablo.websocket.IServerService;
 
+import com.servoy.eclipse.core.Activator;
 import com.servoy.eclipse.core.ServoyModelManager;
+import com.servoy.eclipse.core.elements.IFieldPositioner;
 import com.servoy.eclipse.designer.editor.BaseRestorableCommand;
 import com.servoy.eclipse.designer.editor.BaseVisualFormEditor;
+import com.servoy.eclipse.designer.editor.FormEditPolicy;
+import com.servoy.eclipse.designer.editor.FormGraphicalEditPart;
+import com.servoy.eclipse.designer.editor.commands.AddAccordionPaneAction;
+import com.servoy.eclipse.designer.editor.commands.AddFieldAction;
+import com.servoy.eclipse.designer.editor.commands.AddMediaAction;
+import com.servoy.eclipse.designer.editor.commands.AddPortalAction;
+import com.servoy.eclipse.designer.editor.commands.AddSplitpaneAction;
+import com.servoy.eclipse.designer.editor.commands.AddTabpanelAction;
+import com.servoy.eclipse.designer.editor.commands.DesignerToolbarAction;
 import com.servoy.eclipse.designer.editor.commands.FormElementDeleteCommand;
 import com.servoy.eclipse.model.util.ModelUtils;
 import com.servoy.eclipse.model.util.ServoyLog;
@@ -48,6 +62,7 @@ import com.servoy.j2db.persistence.AbstractBase;
 import com.servoy.j2db.persistence.BaseComponent;
 import com.servoy.j2db.persistence.Bean;
 import com.servoy.j2db.persistence.Field;
+import com.servoy.j2db.persistence.Form;
 import com.servoy.j2db.persistence.GraphicalComponent;
 import com.servoy.j2db.persistence.IDeveloperRepository;
 import com.servoy.j2db.persistence.IFormElement;
@@ -57,12 +72,14 @@ import com.servoy.j2db.persistence.IRepository;
 import com.servoy.j2db.persistence.ISupportBounds;
 import com.servoy.j2db.persistence.ISupportChilds;
 import com.servoy.j2db.persistence.IValidateName;
+import com.servoy.j2db.persistence.Part;
 import com.servoy.j2db.persistence.Portal;
 import com.servoy.j2db.persistence.RectShape;
 import com.servoy.j2db.persistence.RepositoryException;
 import com.servoy.j2db.persistence.StaticContentSpecLoader;
 import com.servoy.j2db.persistence.Tab;
 import com.servoy.j2db.persistence.TabPanel;
+import com.servoy.j2db.server.ngclient.template.PartWrapper;
 import com.servoy.j2db.util.Debug;
 import com.servoy.j2db.util.UUID;
 import com.servoy.j2db.util.Utils;
@@ -105,12 +122,15 @@ public class EditorServiceHandler implements IServerService
 	private final ISelectionProvider selectionProvider;
 	private final AtomicInteger id = new AtomicInteger();
 	private final RfbSelectionListener selectionListener;
+	private final OpenElementWizard openElementWizard;
 
 	public EditorServiceHandler(BaseVisualFormEditor editorPart, ISelectionProvider selectionProvider, RfbSelectionListener selectionListener)
 	{
 		this.editorPart = editorPart;
 		this.selectionProvider = selectionProvider;
 		this.selectionListener = selectionListener;
+
+		openElementWizard = new OpenElementWizard();
 	}
 
 	@Override
@@ -146,8 +166,11 @@ public class EditorServiceHandler implements IServerService
 							try
 							{
 								writer.object();
+								writer.key("style");
+								writer.object();
 								writer.key("left").value(((TabPanel)o).getLocation().getX());
 								writer.key("top").value(((TabPanel)o).getLocation().getY());
+								writer.endObject();
 								writer.key("uuid").value(((TabPanel)o).getUUID());
 								writer.key("ghosts");
 								writer.array();
@@ -158,6 +181,7 @@ public class EditorServiceHandler implements IServerService
 									IPersist tab = tabIterator.next();
 									writer.object();
 									writer.key("uuid").value(tab.getUUID());
+									writer.key("type").value(tab.getTypeID());
 									writer.key("text").value(((Tab)tab).getText());
 									writer.key("location");
 									writer.object();
@@ -180,6 +204,49 @@ public class EditorServiceHandler implements IServerService
 								e.printStackTrace();
 							}
 						}
+						else if (o instanceof Form)
+						{
+							try
+							{
+								writer.object();
+								writer.key("uuid").value(o.getUUID());
+								writer.key("ghosts");
+								writer.array();
+								Iterator<Part> partIterator = ((Form)o).getParts();
+								ArrayList<Part> parts = new ArrayList<Part>();
+								while (partIterator.hasNext())
+									parts.add(partIterator.next());
+
+								for (int i = 0; i < parts.size(); i++)
+								{
+									writer.object();
+									writer.key("uuid").value(parts.get(i).getUUID());
+									writer.key("type").value(parts.get(i).getTypeID());
+									writer.key("text").value(Part.getDisplayName(parts.get(i).getPartType()));
+									writer.key("location");
+									writer.object();
+									writer.key("x").value(0);
+									writer.key("y").value(parts.get(i).getSize().getHeight());
+									writer.endObject();
+									writer.key("parttype").value(parts.get(i).getPartType());
+									if (i > 0) writer.key("partprev").value(parts.get(i - 1).getUUID());
+									if (i < parts.size() - 1) writer.key("partnext").value(parts.get(i + 1).getUUID());
+									writer.endObject();
+								}
+
+								writer.endArray();
+								writer.endObject();
+							}
+							catch (IllegalArgumentException e)
+							{
+								e.printStackTrace();
+							}
+							catch (JSONException e)
+							{
+								e.printStackTrace();
+							}
+						}
+
 						return IPersistVisitor.CONTINUE_TRAVERSAL;
 					}
 				});
@@ -239,12 +306,13 @@ public class EditorServiceHandler implements IServerService
 						Iterator keys = args.keys();
 						while (keys.hasNext())
 						{
+							CompoundCommand cc = null;
 							String uuid = (String)keys.next();
 							final IPersist persist = ModelUtils.getEditingFlattenedSolution(editorPart.getForm()).searchPersist(UUID.fromString(uuid));
 							if (persist instanceof BaseComponent || persist instanceof Tab)
 							{
 								JSONObject properties = args.optJSONObject(uuid);
-								CompoundCommand cc = new CompoundCommand();
+								cc = new CompoundCommand();
 								if (properties.has("x") && properties.has("y"))
 								{
 									cc.add(new SetPropertyCommand("move", PersistPropertySource.createPersistPropertySource(persist, false),
@@ -258,6 +326,17 @@ public class EditorServiceHandler implements IServerService
 								}
 								editorPart.getCommandStack().execute(cc);
 							}
+							else if (persist instanceof Part)
+							{
+								JSONObject properties = args.optJSONObject(uuid);
+								cc = new CompoundCommand();
+								if (properties.has("y"))
+								{
+									cc.add(new SetPropertyCommand("resize", PersistPropertySource.createPersistPropertySource(persist, false),
+										StaticContentSpecLoader.PROPERTY_HEIGHT.getPropertyName(), new Integer(properties.optInt("y"))));
+								}
+							}
+							if (cc != null) editorPart.getCommandStack().execute(cc);
 						}
 					}
 				});
@@ -314,6 +393,27 @@ public class EditorServiceHandler implements IServerService
 						});
 					}
 				});
+			}
+			else if ("getPartsStyles".equals(methodName))
+			{
+				StringWriter stringWriter = new StringWriter();
+				final JSONWriter writer = new JSONWriter(stringWriter);
+
+				writer.array();
+
+				Iterator<Part> partsIte = editorPart.getForm().getParts();
+				while (partsIte.hasNext())
+				{
+					PartWrapper partWrapper = new PartWrapper(partsIte.next(), editorPart.getForm(), null);
+					writer.object();
+					writer.key("name").value(partWrapper.getName());
+					writer.key("style").value(new JSONObject(partWrapper.getStyle()));
+					writer.endObject();
+				}
+
+				writer.endArray();
+
+				return new JSONArray(stringWriter.getBuffer().toString());
 			}
 			else if ("createComponents".equals(methodName))
 			{
@@ -381,6 +481,16 @@ public class EditorServiceHandler implements IServerService
 							}
 
 						});
+					}
+				});
+			}
+			else if ("openElementWizard".equals(methodName))
+			{
+				Display.getDefault().asyncExec(new Runnable()
+				{
+					public void run()
+					{
+						openElementWizard.run(args.optString("elementType"));
 					}
 				});
 			}
@@ -607,5 +717,202 @@ public class EditorServiceHandler implements IServerService
 			}
 		}
 		return null;
+	}
+
+	class OpenElementWizard
+	{
+		DesignerToolbarAction fieldA, imageA, portalA, splitA, tabsA, accordionA;
+		FormGraphicalEditPart formEditPart;
+
+		OpenElementWizard()
+		{
+			formEditPart = new FormGraphicalEditPart(Activator.getDefault().getDesignClient(), editorPart);
+			formEditPart.installEditPolicy(EditPolicy.COMPONENT_ROLE, new FormEditPolicy(Activator.getDefault().getDesignClient(), new IFieldPositioner()
+			{
+
+				@Override
+				public void setDefaultLocation(org.eclipse.swt.graphics.Point location)
+				{
+					// TODO Auto-generated method stub
+				}
+
+				@Override
+				public org.eclipse.swt.graphics.Point getNextLocation(org.eclipse.swt.graphics.Point location)
+				{
+					return new org.eclipse.swt.graphics.Point(100, 100);
+				}
+			}));
+		}
+
+		void run(String wizardType)
+		{
+			if ("field".equals(wizardType))
+			{
+				getFieldAction().run();
+			}
+			else if ("image".equals(wizardType))
+			{
+				getImageAction().run();
+			}
+			else if ("portal".equals(wizardType))
+			{
+				getPortalAction().run();
+			}
+			else if ("tabpanel".equals(wizardType))
+			{
+				getTabsA().run();
+			}
+			else if ("splitpane".equals(wizardType))
+			{
+				getSplitA().run();
+			}
+			else if ("accordion".equals(wizardType))
+			{
+				getAccordionA().run();
+			}
+		}
+
+		DesignerToolbarAction getFieldAction()
+		{
+			if (fieldA == null)
+			{
+				fieldA = new AddFieldAction(editorPart)
+				{
+					@Override
+					protected ISelection getSelection()
+					{
+						return OpenElementWizard.this.getSelection();
+					}
+
+					@Override
+					protected IPersist getContext(EditPart editPart, int typeId)
+					{
+						return OpenElementWizard.this.getContext(typeId);
+					}
+				};
+			}
+			return fieldA;
+		}
+
+		DesignerToolbarAction getImageAction()
+		{
+			if (imageA == null)
+			{
+				imageA = new AddMediaAction(editorPart)
+				{
+					@Override
+					protected ISelection getSelection()
+					{
+						return OpenElementWizard.this.getSelection();
+					}
+
+					@Override
+					protected IPersist getContext(EditPart editPart, int typeId)
+					{
+						return OpenElementWizard.this.getContext(typeId);
+					}
+				};
+			}
+			return imageA;
+		}
+
+		DesignerToolbarAction getPortalAction()
+		{
+			if (portalA == null)
+			{
+				portalA = new AddPortalAction(editorPart)
+				{
+					@Override
+					protected ISelection getSelection()
+					{
+						return OpenElementWizard.this.getSelection();
+					}
+
+					@Override
+					protected IPersist getContext(EditPart editPart, int typeId)
+					{
+						return OpenElementWizard.this.getContext(typeId);
+					}
+				};
+			}
+			return portalA;
+
+		}
+
+		DesignerToolbarAction getSplitA()
+		{
+			if (splitA == null)
+			{
+				splitA = new AddSplitpaneAction(editorPart)
+				{
+					@Override
+					protected ISelection getSelection()
+					{
+						return OpenElementWizard.this.getSelection();
+					}
+
+					@Override
+					protected IPersist getContext(EditPart editPart, int typeId)
+					{
+						return OpenElementWizard.this.getContext(typeId);
+					}
+				};
+			}
+			return splitA;
+		}
+
+		DesignerToolbarAction getTabsA()
+		{
+			if (tabsA == null)
+			{
+				tabsA = new AddTabpanelAction(editorPart)
+				{
+					@Override
+					protected ISelection getSelection()
+					{
+						return OpenElementWizard.this.getSelection();
+					}
+
+					@Override
+					protected IPersist getContext(EditPart editPart, int typeId)
+					{
+						return OpenElementWizard.this.getContext(typeId);
+					}
+				};
+			}
+			return tabsA;
+		}
+
+		DesignerToolbarAction getAccordionA()
+		{
+			if (accordionA == null)
+			{
+				accordionA = new AddAccordionPaneAction(editorPart)
+				{
+					@Override
+					protected ISelection getSelection()
+					{
+						return OpenElementWizard.this.getSelection();
+					}
+
+					@Override
+					protected IPersist getContext(EditPart editPart, int typeId)
+					{
+						return OpenElementWizard.this.getContext(typeId);
+					}
+				};
+			}
+			return accordionA;
+		}
+
+		ISelection getSelection()
+		{
+			return new StructuredSelection(formEditPart);
+		}
+
+		IPersist getContext(int typeId)
+		{
+			return typeId == IRepository.FORMS ? editorPart.getForm() : null;
+		}
 	}
 }

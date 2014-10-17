@@ -33,7 +33,8 @@ import org.sablo.websocket.WebsocketEndpoint;
 import com.servoy.j2db.server.ngclient.WebsocketSessionFactory;
 
 /**
- * RAGTEST doc
+ * WebsocketEndpoint for editor content (running design ngclient)
+ * 
  * @author rgansevles
  *
  */
@@ -41,7 +42,6 @@ import com.servoy.j2db.server.ngclient.WebsocketSessionFactory;
 @ServerEndpoint(value = "/rfb/angular/content/websocket/{sessionid}/{windowid}/{solutionName}")
 public class EditorContentEndpoint extends WebsocketEndpoint
 {
-	// RAGTEST wssessiion factory voor design client
 	public EditorContentEndpoint()
 	{
 		super(WebsocketSessionFactory.DESIGN_ENDPOINT);

@@ -70,7 +70,7 @@
 							"type": {
 								"type":"string"
 							},
-							"showInPalette": {
+							"droppable": {
 								"type":"boolean"
 							},
 							"for": {
@@ -78,7 +78,7 @@
 							},
 							"scope": {
 								"type": "string",
-								"enum": ["design"]
+								"enum": ["design", "runtime"]
 							},
 							"values":{
 								"type": "array"

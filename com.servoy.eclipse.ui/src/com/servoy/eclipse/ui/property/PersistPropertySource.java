@@ -61,6 +61,7 @@ import org.sablo.specification.property.types.BytePropertyType;
 import org.sablo.specification.property.types.ColorPropertyType;
 import org.sablo.specification.property.types.DimensionPropertyType;
 import org.sablo.specification.property.types.DoublePropertyType;
+import org.sablo.specification.property.types.EnablePropertyType;
 import org.sablo.specification.property.types.FloatPropertyType;
 import org.sablo.specification.property.types.FontPropertyType;
 import org.sablo.specification.property.types.FunctionPropertyType;
@@ -1408,7 +1409,7 @@ public class PersistPropertySource implements IPropertySource, IAdaptable, IMode
 				return borderPropertyController;
 			}
 
-			if (propertyType == BooleanPropertyType.INSTANCE)
+			if (propertyType == BooleanPropertyType.INSTANCE || propertyType == EnablePropertyType.INSTANCE)
 			{
 				return new CheckboxPropertyDescriptor(id, displayName);
 			}
@@ -1727,36 +1728,27 @@ public class PersistPropertySource implements IPropertySource, IAdaptable, IMode
 		{
 			ServoyLog.logError("Unknown property id " + id, null);
 			return null;
-
 		}
+
 		if (id instanceof String)
 		{
 			AbstractRepository repository = (EclipseRepository)persistContext.getPersist().getRootObject().getRepository();
 			try
 			{
 				Element element = repository.getContentSpec().getPropertyForObjectTypeByName(persistContext.getPersist().getTypeID(), (String)id);
-				if (element == null)
-				{
-					// no content spec (example: form.width), try based on property descriptor
-					PropertyDescription desc = beanPropertyDescriptor.propertyDescriptor.getPropertyDescription(beanPropertyDescriptor.valueObject, this,
-						persistContext);
-					if (desc != null)
-					{
-						if (desc.getType() == IntPropertyType.INSTANCE)
-						{
-							return repository.convertArgumentStringToObject(IRepository.INTEGER, null);
-						}
-						if (desc.getType() == BooleanPropertyType.INSTANCE)
-						{
-							return repository.convertArgumentStringToObject(IRepository.BOOLEAN, null);
-						}
-						if (desc.getDefaultValue() != null) return desc.getDefaultValue();
-						if (desc.getType() != null) return desc.getType().defaultValue();
-					}
-				}
-				else
+				if (element != null)
 				{
 					return repository.convertArgumentStringToObject(element.getTypeID(), element.getDefaultTextualClassValue());
+				}
+
+				// no content spec (example: form.width), try based on property descriptor
+				PropertyDescription desc = beanPropertyDescriptor.propertyDescriptor.getPropertyDescription(beanPropertyDescriptor.valueObject, this,
+					persistContext);
+				if (desc != null)
+				{
+					// RAGTEST test
+					if (desc.getDefaultValue() != null) return desc.getDefaultValue();
+					if (desc.getType() != null) return desc.getType().defaultValue();
 				}
 			}
 			catch (RepositoryException e)
@@ -2415,7 +2407,7 @@ public class PersistPropertySource implements IPropertySource, IAdaptable, IMode
 	{
 		if (propertyDescription == null) return null;
 
-		IPropertyType propertyType = propertyDescription.getType();
+		IPropertyType< ? > propertyType = propertyDescription.getType();
 		if (propertyType == ValuesPropertyType.INSTANCE)
 		{
 			final ValuesConfig config = (ValuesConfig)propertyDescription.getConfig();
@@ -2713,6 +2705,7 @@ public class PersistPropertySource implements IPropertySource, IAdaptable, IMode
 
 		if (propertyType == FoundsetPropertyType.INSTANCE)
 		{
+			// RAGTEST config json
 			return new FoundsetPropertyController(id, displayName, flattenedEditingSolution, persistContext, (JSONObject)propertyDescription.getConfig());
 		}
 

@@ -143,24 +143,19 @@ public class ModelUtils
 							PropertyDescription pd = spec.getProperty(styleClassProperty);
 							if (pd != null)
 							{
-								List<Object> values = pd.getValues();
-								if (values != null)
-								{
-									Collections.sort(values, StringComparator.INSTANCE);
-									cssClasses.addAll(values);
-								}
+								cssClasses.addAll(pd.getValues());
 							}
 						}
 
+						Collections.sort(cssClasses, StringComparator.INSTANCE);
 					}
 
 					String cssContent = new String(media.getMediaData(), "UTF-8");
 					IStyleSheet ss = new ServoyStyleSheet(cssContent, media.getName());
 					List<Object> cssSelectors = new ArrayList<Object>();
-					Iterator<String> it = ss.getStyleNames().iterator();
-					while (it.hasNext())
+
+					for (String cssSelector : ss.getStyleNames())
 					{
-						String cssSelector = it.next();
 						if (cssSelector.contains("."))
 						{
 							String[] selectors = cssSelector.split("\\.");
@@ -182,6 +177,7 @@ public class ModelUtils
 							}
 						}
 					}
+
 					Collections.sort(cssSelectors, StringComparator.INSTANCE);
 					cssClasses.addAll(cssSelectors);
 					return cssClasses.toArray(new String[0]);

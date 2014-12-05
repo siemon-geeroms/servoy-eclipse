@@ -73,7 +73,7 @@ public class WebComponentPropertySource extends PersistPropertySource
 		}
 	}
 
-	private final PropertyDescription protpetyDescription;
+	private final PropertyDescription propertyDescription;
 
 	public WebComponentPropertySource(PersistContext persistContext, boolean readonly, PropertyDescription propertyDescription)
 	{
@@ -82,7 +82,7 @@ public class WebComponentPropertySource extends PersistPropertySource
 		{
 			throw new IllegalArgumentException();
 		}
-		this.protpetyDescription = propertyDescription;
+		this.propertyDescription = propertyDescription;
 	}
 
 	@Override
@@ -96,7 +96,7 @@ public class WebComponentPropertySource extends PersistPropertySource
 	{
 		List<IPropertyHandler> props = new ArrayList<IPropertyHandler>();
 
-		for (PropertyDescription desc : protpetyDescription.getProperties().values())
+		for (PropertyDescription desc : propertyDescription.getProperties().values())
 		{
 			if (desc.getScope() != null && !"design".equals(desc.getScope()))
 			{
@@ -111,19 +111,15 @@ public class WebComponentPropertySource extends PersistPropertySource
 			}
 			else
 			{
-				if (desc.getValues() != null && desc.getValues().size() > 0 &&
-					!desc.getName().equals(StaticContentSpecLoader.PROPERTY_STYLECLASS.getPropertyName()))
+				List<Object> values = desc.getValues();
+				if (values.size() > 0 && !desc.getName().equals(StaticContentSpecLoader.PROPERTY_STYLECLASS.getPropertyName()))
 				{
 					ValuesConfig config = new ValuesConfig();
-					if (!(desc.getValues().get(0) instanceof JSONObject))
-					{
-						config.setValues(desc.getValues().toArray(new Object[0]));
-					}
-					else
+					if (values.get(0) instanceof JSONObject)
 					{
 						List<String> displayValues = new ArrayList<String>();
 						List<Object> realValues = new ArrayList<Object>();
-						for (Object jsonObject : desc.getValues())
+						for (Object jsonObject : values)
 						{
 							if (jsonObject instanceof JSONObject)
 							{
@@ -133,14 +129,20 @@ public class WebComponentPropertySource extends PersistPropertySource
 								realValues.add(value);
 							}
 						}
-						config.setValues(realValues.toArray(), displayValues.toArray(new String[0]));
+						config.setValues(realValues.toArray(), displayValues.toArray(new String[displayValues.size()]));
 					}
+					else
+					{
+						config.setValues(values.toArray(new Object[values.size()]));
+					}
+
 					if (desc.getDefaultValue() != null)
 					{
 						config.addDefault(desc.getDefaultValue(), null);
 					}
-					props.add(new WebComponentPropertyHandler(new PropertyDescription(desc.getName(), ValuesPropertyType.INSTANCE, config,
-						desc.getDefaultValue())));
+
+					props.add(new WebComponentPropertyHandler(new PropertyDescription(desc.getName(), ValuesPropertyType.INSTANCE, null, config,
+						desc.getDefaultValue(), null, false)));
 				}
 				else
 				{
@@ -149,9 +151,12 @@ public class WebComponentPropertySource extends PersistPropertySource
 			}
 		}
 
-		if (protpetyDescription instanceof WebComponentSpecification) for (PropertyDescription desc : ((WebComponentSpecification)protpetyDescription).getHandlers().values())
+		if (propertyDescription instanceof WebComponentSpecification)
 		{
-			props.add(new WebComponentPropertyHandler(desc));
+			for (PropertyDescription desc : ((WebComponentSpecification)propertyDescription).getHandlers().values())
+			{
+				props.add(new WebComponentPropertyHandler(desc));
+			}
 		}
 
 		return props.toArray(new IPropertyHandler[props.size()]);
@@ -159,28 +164,27 @@ public class WebComponentPropertySource extends PersistPropertySource
 
 	/*
 	 * (non-Javadoc)
-	 *
+	 * 
 	 * @see
 	 * com.servoy.eclipse.ui.property.PersistPropertySource#createPropertyCategory(com.servoy.eclipse.ui.property.PersistPropertySource.PropertyDescriptorWrapper
 	 * )
-	 *
+	 * 
 	 * Properties from spec should be dispayed under "Component" category except for handlers and BEAN_PROPERTIES. Properties found with reflection are handled
 	 * by the super class (they go under "Properties").
 	 */
 	@Override
 	protected PropertyCategory createPropertyCategory(PropertyDescriptorWrapper propertyDescriptor)
 	{
-		if (((protpetyDescription instanceof WebComponentSpecification) && ((WebComponentSpecification)protpetyDescription).getHandlers().containsKey(
-			propertyDescriptor.propertyDescriptor.getName())) ||
+		if (((propertyDescription instanceof WebComponentSpecification) && ((WebComponentSpecification)propertyDescription).getHandler(propertyDescriptor.propertyDescriptor.getName()) != null) ||
 			BEAN_PROPERTIES.containsKey(propertyDescriptor.propertyDescriptor.getName())) return super.createPropertyCategory(propertyDescriptor);
-		if (protpetyDescription.getProperties().containsKey(propertyDescriptor.propertyDescriptor.getName())) return PropertyCategory.Component;
+		if (propertyDescription.getProperties().containsKey(propertyDescriptor.propertyDescriptor.getName())) return PropertyCategory.Component;
 		return super.createPropertyCategory(propertyDescriptor);
 	}
 
 	@Override
 	public String toString()
 	{
-		if (protpetyDescription instanceof WebComponentSpecification) return ((WebComponentSpecification)protpetyDescription).getDisplayName();
-		return protpetyDescription.getName();
+		if (propertyDescription instanceof WebComponentSpecification) return ((WebComponentSpecification)propertyDescription).getDisplayName();
+		return propertyDescription.getName();
 	}
 }

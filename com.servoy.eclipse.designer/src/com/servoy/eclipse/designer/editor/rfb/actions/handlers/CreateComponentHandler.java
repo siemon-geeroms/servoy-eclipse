@@ -191,6 +191,7 @@ public class CreateComponentHandler implements IServerService
 							int index = -1;
 							boolean isArray = false;
 							WebComponentSpecification spec = WebComponentSpecProvider.getInstance().getWebComponentSpecification(parentBean.getBeanClassName());
+							// RAGTEST config json
 							Object config = spec.getProperty(dropTargetFieldName).getConfig();
 							JSONObject configObject = new JSONObject(config.toString());
 							if (configObject.getString("type").endsWith("]")) isArray = true;

@@ -92,6 +92,7 @@ import org.sablo.specification.property.IPropertyType;
 import org.sablo.specification.property.types.BooleanPropertyType;
 import org.sablo.specification.property.types.DatePropertyType;
 import org.sablo.specification.property.types.DoublePropertyType;
+import org.sablo.specification.property.types.EnablePropertyType;
 import org.sablo.specification.property.types.FloatPropertyType;
 import org.sablo.specification.property.types.IntPropertyType;
 import org.sablo.specification.property.types.LongPropertyType;
@@ -1092,9 +1093,9 @@ public class TypeCreator extends TypeCache
 			if (returnType == null && api.getReturnType() != null)
 			{
 				returnType = getTypeRef(null, api.getReturnType().getType().getName());
-				if (api.getReturnType().getConfig() instanceof Boolean)
+				if (Boolean.TRUE.equals(api.getReturnType().getConfig()))
 				{
-					if ((Boolean)api.getReturnType().getConfig()) returnType = TypeUtil.arrayOf(returnType);
+					returnType = TypeUtil.arrayOf(returnType);
 				}
 			}
 			method.setType(returnType);
@@ -1109,9 +1110,9 @@ public class TypeCreator extends TypeCache
 				if (paramType == null)
 				{
 					paramType = getTypeRef(null, paramDesc.getType().getName());
-					if (paramDesc.getConfig() instanceof Boolean)
+					if (Boolean.TRUE.equals(paramDesc.getConfig()))
 					{
-						if ((Boolean)paramDesc.getConfig()) paramType = TypeUtil.arrayOf(paramType);
+						paramType = TypeUtil.arrayOf(paramType);
 					}
 				}
 				param.setType(paramType);
@@ -1131,7 +1132,7 @@ public class TypeCreator extends TypeCache
 	{
 		if (pd == null) return null;
 		IPropertyType< ? > type = pd.getType();
-		if (type == BooleanPropertyType.INSTANCE) return getTypeRef(context, ITypeNames.BOOLEAN);
+		if (type == BooleanPropertyType.INSTANCE || type == EnablePropertyType.INSTANCE) return getTypeRef(context, ITypeNames.BOOLEAN);
 		if (type == IntPropertyType.INSTANCE || type == LongPropertyType.INSTANCE || type == FloatPropertyType.INSTANCE || type == DoublePropertyType.INSTANCE) return getTypeRef(
 			context, ITypeNames.NUMBER);
 		if (type == StringPropertyType.INSTANCE || type == TagStringPropertyType.INSTANCE) return getTypeRef(context, ITypeNames.STRING);

@@ -858,7 +858,7 @@ public class TypeCreator extends TypeCache
 							@Override
 							public IStatus run(IProgressMonitor monitor)
 							{
-								flushCache();
+								clearCache();
 								return Status.OK_STATUS;
 							}
 						};

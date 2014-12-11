@@ -111,15 +111,19 @@ public class WebComponentPropertySource extends PersistPropertySource
 			}
 			else
 			{
-				List<Object> values = desc.getValues();
-				if (values.size() > 0 && !desc.getName().equals(StaticContentSpecLoader.PROPERTY_STYLECLASS.getPropertyName()))
+				if (desc.getValues() != null && desc.getValues().size() > 0 &&
+					!desc.getName().equals(StaticContentSpecLoader.PROPERTY_STYLECLASS.getPropertyName()))
 				{
 					ValuesConfig config = new ValuesConfig();
-					if (values.get(0) instanceof JSONObject)
+					if (!(desc.getValues().get(0) instanceof JSONObject))
+					{
+						config.setValues(desc.getValues().toArray(new Object[0]));
+					}
+					else
 					{
 						List<String> displayValues = new ArrayList<String>();
 						List<Object> realValues = new ArrayList<Object>();
-						for (Object jsonObject : values)
+						for (Object jsonObject : desc.getValues())
 						{
 							if (jsonObject instanceof JSONObject)
 							{
@@ -129,18 +133,12 @@ public class WebComponentPropertySource extends PersistPropertySource
 								realValues.add(value);
 							}
 						}
-						config.setValues(realValues.toArray(), displayValues.toArray(new String[displayValues.size()]));
+						config.setValues(realValues.toArray(), displayValues.toArray(new String[0]));
 					}
-					else
-					{
-						config.setValues(values.toArray(new Object[values.size()]));
-					}
-
 					if (desc.getDefaultValue() != null)
 					{
 						config.addDefault(desc.getDefaultValue(), null);
 					}
-
 					props.add(new WebComponentPropertyHandler(new PropertyDescription(desc.getName(), ValuesPropertyType.INSTANCE, null, config,
 						desc.getDefaultValue(), null, false)));
 				}
@@ -151,12 +149,9 @@ public class WebComponentPropertySource extends PersistPropertySource
 			}
 		}
 
-		if (propertyDescription instanceof WebComponentSpecification)
+		if (propertyDescription instanceof WebComponentSpecification) for (PropertyDescription desc : ((WebComponentSpecification)propertyDescription).getHandlers().values())
 		{
-			for (PropertyDescription desc : ((WebComponentSpecification)propertyDescription).getHandlers().values())
-			{
-				props.add(new WebComponentPropertyHandler(desc));
-			}
+			props.add(new WebComponentPropertyHandler(desc));
 		}
 
 		return props.toArray(new IPropertyHandler[props.size()]);
@@ -175,7 +170,8 @@ public class WebComponentPropertySource extends PersistPropertySource
 	@Override
 	protected PropertyCategory createPropertyCategory(PropertyDescriptorWrapper propertyDescriptor)
 	{
-		if (((propertyDescription instanceof WebComponentSpecification) && ((WebComponentSpecification)propertyDescription).getHandler(propertyDescriptor.propertyDescriptor.getName()) != null) ||
+		if (((propertyDescription instanceof WebComponentSpecification) && ((WebComponentSpecification)propertyDescription).getHandlers().containsKey(
+			propertyDescriptor.propertyDescriptor.getName())) ||
 			BEAN_PROPERTIES.containsKey(propertyDescriptor.propertyDescriptor.getName())) return super.createPropertyCategory(propertyDescriptor);
 		if (propertyDescription.getProperties().containsKey(propertyDescriptor.propertyDescriptor.getName())) return PropertyCategory.Component;
 		return super.createPropertyCategory(propertyDescriptor);
@@ -184,7 +180,8 @@ public class WebComponentPropertySource extends PersistPropertySource
 	@Override
 	public String toString()
 	{
-		if (propertyDescription instanceof WebComponentSpecification) return ((WebComponentSpecification)propertyDescription).getDisplayName();
+		if (propertyDescription instanceof WebComponentSpecification) return ((WebComponentSpecification)propertyDescription).getDisplayName() + " - " +
+			((Bean)persistContext.getPersist()).getName();
 		return propertyDescription.getName();
 	}
 }

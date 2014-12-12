@@ -28,7 +28,6 @@ import org.sablo.specification.property.types.BytePropertyType;
 import org.sablo.specification.property.types.ColorPropertyType;
 import org.sablo.specification.property.types.DimensionPropertyType;
 import org.sablo.specification.property.types.DoublePropertyType;
-import org.sablo.specification.property.types.EnablePropertyType;
 import org.sablo.specification.property.types.FloatPropertyType;
 import org.sablo.specification.property.types.FontPropertyType;
 import org.sablo.specification.property.types.InsetsPropertyType;
@@ -134,11 +133,11 @@ public class BasePropertyHandler implements IPropertyHandler
 
 		if (clazz == boolean.class || clazz == Boolean.class)
 		{
-			if ("enabled".equals(name))
-			{
-				// RAGTEST nodig??
-				return new PropertyDescription(name, EnablePropertyType.INSTANCE);
-			}
+//			if ("enabled".equals(name))
+//			{
+//				// RAGTEST nodig??
+//				return new PropertyDescription(name, EnablePropertyType.INSTANCE);
+//			}
 			return new PropertyDescription(name, BooleanPropertyType.INSTANCE);
 		}
 

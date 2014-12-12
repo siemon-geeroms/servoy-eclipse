@@ -92,7 +92,6 @@ import org.sablo.specification.property.IPropertyType;
 import org.sablo.specification.property.types.BooleanPropertyType;
 import org.sablo.specification.property.types.DatePropertyType;
 import org.sablo.specification.property.types.DoublePropertyType;
-import org.sablo.specification.property.types.EnablePropertyType;
 import org.sablo.specification.property.types.FloatPropertyType;
 import org.sablo.specification.property.types.IntPropertyType;
 import org.sablo.specification.property.types.LongPropertyType;
@@ -1132,7 +1131,7 @@ public class TypeCreator extends TypeCache
 	{
 		if (pd == null) return null;
 		IPropertyType< ? > type = pd.getType();
-		if (type == BooleanPropertyType.INSTANCE || type == EnablePropertyType.INSTANCE) return getTypeRef(context, ITypeNames.BOOLEAN);
+		if (type == BooleanPropertyType.INSTANCE || type.isProtecting()) return getTypeRef(context, ITypeNames.BOOLEAN);
 		if (type == IntPropertyType.INSTANCE || type == LongPropertyType.INSTANCE || type == FloatPropertyType.INSTANCE || type == DoublePropertyType.INSTANCE) return getTypeRef(
 			context, ITypeNames.NUMBER);
 		if (type == StringPropertyType.INSTANCE || type == TagStringPropertyType.INSTANCE) return getTypeRef(context, ITypeNames.STRING);

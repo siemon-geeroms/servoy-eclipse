@@ -61,7 +61,6 @@ import org.sablo.specification.property.types.BytePropertyType;
 import org.sablo.specification.property.types.ColorPropertyType;
 import org.sablo.specification.property.types.DimensionPropertyType;
 import org.sablo.specification.property.types.DoublePropertyType;
-import org.sablo.specification.property.types.EnablePropertyType;
 import org.sablo.specification.property.types.FloatPropertyType;
 import org.sablo.specification.property.types.FontPropertyType;
 import org.sablo.specification.property.types.FunctionPropertyType;
@@ -1409,7 +1408,7 @@ public class PersistPropertySource implements IPropertySource, IAdaptable, IMode
 				return borderPropertyController;
 			}
 
-			if (propertyType == BooleanPropertyType.INSTANCE || propertyType == EnablePropertyType.INSTANCE)
+			if (propertyType == BooleanPropertyType.INSTANCE) // RAGTEST || propertyType == EnablePropertyType.INSTANCE)
 			{
 				return new CheckboxPropertyDescriptor(id, displayName);
 			}

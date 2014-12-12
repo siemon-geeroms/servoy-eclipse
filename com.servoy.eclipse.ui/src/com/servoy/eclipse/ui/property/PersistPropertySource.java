@@ -291,7 +291,7 @@ public class PersistPropertySource implements IPropertySource, IAdaptable, IMode
 	{
 		public String convertProperty(Object id, String value)
 		{
-			return (value == null) ? "" : value;
+			return value == null ? "" : value;
 		}
 
 		public String convertValue(Object id, String value)
@@ -303,7 +303,7 @@ public class PersistPropertySource implements IPropertySource, IAdaptable, IMode
 	{
 		public String convertProperty(Object id, String value)
 		{
-			return (value == null) ? "DEFAULT" : value;
+			return value == null ? "DEFAULT" : value;
 		}
 
 		public String convertValue(Object id, String value)
@@ -401,7 +401,6 @@ public class PersistPropertySource implements IPropertySource, IAdaptable, IMode
 			FlattenedSolution flattenedEditingSolution = ModelUtils.getEditingFlattenedSolution(persistContext.getPersist(), persistContext.getContext());
 			Form form = (Form)(Utils.isInheritedFormElement(persistContext.getPersist(), persistContext.getContext()) ? persistContext.getContext()
 				: persistContext.getPersist()).getAncestor(IRepository.FORMS);
-
 
 			propertyDescriptors = new LinkedHashMap<Object, IPropertyDescriptor>();// defines order
 			hiddenPropertyDescriptors = new HashMap<Object, IPropertyDescriptor>();
@@ -1408,7 +1407,7 @@ public class PersistPropertySource implements IPropertySource, IAdaptable, IMode
 				return borderPropertyController;
 			}
 
-			if (propertyType == BooleanPropertyType.INSTANCE) // RAGTEST || propertyType == EnablePropertyType.INSTANCE)
+			if (propertyType == BooleanPropertyType.INSTANCE || propertyType.isProtecting())
 			{
 				return new CheckboxPropertyDescriptor(id, displayName);
 			}

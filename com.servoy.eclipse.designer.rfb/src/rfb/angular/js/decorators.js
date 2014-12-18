@@ -1,4 +1,4 @@
-angular.module("decorators",['editor','margin','resizeknobs']).directive("decorator", function($rootScope,EDITOR_EVENTS){
+angular.module("decorators",['editor','margin','resizeknobs']).directive("decorator", function($rootScope,EDITOR_EVENTS,EDITOR_CONSTANTS){
 	return {
 	      restrict: 'E',
 	      transclude: true,
@@ -13,6 +13,13 @@ angular.module("decorators",['editor','margin','resizeknobs']).directive("decora
 				return (' ' + element.className + ' ').indexOf(' ' + cls + ' ') > -1;
 			}
 			function renderDecorators(selection) {
+				if (selection.length == 1){
+					//when resizing the form, the server sends a refreshGhosts message that updates the form ghost div => the selection references a stale form ghost,
+					//we need to search for the real form ghost div
+					var formDiv = angular.element($scope.glasspane).find("[svy-id="+selection[0].getAttribute("svy-id")+"]");
+					if (formDiv[0] && formDiv[0].getAttribute("svy-id") == selection[0].getAttribute("svy-id"))
+						selection[0] = formDiv[0];
+				}
 				selection.forEach(function(value, index, array) {
 					var currentNode = $scope.nodes[index];
 					if (!currentNode) {
@@ -36,6 +43,14 @@ angular.module("decorators",['editor','margin','resizeknobs']).directive("decora
 					
 					currentNode.name =  node.attr('name');
 					currentNode.node = node;
+					var ghost = $scope.getGhost(node.attr("svy-id"));
+					if(ghost) {
+						currentNode.isResizable = (ghost.type == EDITOR_CONSTANTS.GHOST_TYPE_COMPONENT) || (ghost.type == EDITOR_CONSTANTS.GHOST_TYPE_FORM);	
+					}
+					else {
+						currentNode.isResizable = true;
+					}
+					
 					var offset = node.offset();
 					
 					//this is so that ghost elements decorators are positioned correctly

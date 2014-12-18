@@ -39,6 +39,8 @@ import org.eclipse.ui.internal.util.BundleUtility;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.sablo.Container;
+import org.sablo.WebComponent;
 import org.sablo.specification.PropertyDescription;
 import org.sablo.specification.WebComponentSpecification;
 import org.sablo.websocket.IWebsocketSession;
@@ -182,7 +184,7 @@ public class Activator extends AbstractUIPlugin
 							FormElement newFe = new FormElement(persist, cntxt.getSolution(), new PropertyPath(), true);
 
 							IWebFormUI formUI = (IWebFormUI)fc.getFormUI();
-							WebFormComponent webComponent = formUI.getWebComponent(newFe.getName());
+							WebFormComponent webComponent = findWebComponent(formUI.getComponents(), newFe.getName());
 							if (webComponent != null)
 							{
 								FormElement existingFe = webComponent.getFormElement();
@@ -208,10 +210,28 @@ public class Activator extends AbstractUIPlugin
 											bigChange = true;
 											break outer;
 										}
+										if (webComponent.getParent() != formUI && (property.equals("location") || property.equals("size")))
+										{
+											bigChange = true;
+											break outer;
+										}
 										PropertyDescription prop = spec.getProperty(property);
 										if (prop != null)
 										{
-											if ("design".equals(prop.getScope()) || prop.getType() == DataproviderPropertyType.INSTANCE)
+											if (prop.getType() == DataproviderPropertyType.INSTANCE)
+											{
+												// if it is a portal based component then the dataprovider is only the last part for this webcomponent
+												// so if the new value ends with the current value then it is still the same and it is not a big change (this also doesn't have to be set on the component)
+												if (webComponent.getParent() == formUI ||
+													!((newPropValue instanceof String) && (currentPropValue instanceof String) && ((String)newPropValue).endsWith((String)currentPropValue)))
+												{
+													// this is a design property change so a big change
+													bigChange = true;
+													break outer;
+												}
+												continue;
+											}
+											else if ("design".equals(prop.getScope()))
 											{
 												// this is a design property change so a big change
 												bigChange = true;
@@ -255,15 +275,38 @@ public class Activator extends AbstractUIPlugin
 					}
 					getWebsocketSession().getService(DesignNGClientWebsocketSession.EDITOR_CONTENT_SERVICE).executeAsyncServiceCall("refreshGhosts",
 						new Object[] { });
-					getWebsocketSession().getService(DesignNGClientWebsocketSession.EDITOR_CONTENT_SERVICE).executeAsyncServiceCall(
-						"updateForm",
-						new Object[] { changedForm.getName(), changedForm.getUUID().toString(), Integer.valueOf((int)form.getSize().getWidth()), Integer.valueOf((int)form.getSize().getHeight()) });
+					if (!form.getLayoutContainers().hasNext())
+					{
+						getWebsocketSession().getService(DesignNGClientWebsocketSession.EDITOR_CONTENT_SERVICE).executeAsyncServiceCall(
+							"updateForm",
+							new Object[] { changedForm.getName(), changedForm.getUUID().toString(), Integer.valueOf((int)form.getSize().getWidth()), Integer.valueOf((int)form.getSize().getHeight()) });
+					}
 				}
 				else
 				{
 					getWebsocketSession().getService(DesignNGClientWebsocketSession.EDITOR_CONTENT_SERVICE).executeAsyncServiceCall("refreshDecorators",
 						new Object[] { });
 				}
+			}
+
+			/**
+			 * @param components
+			 * @param name
+			 * @return
+			 */
+			private WebFormComponent findWebComponent(Collection<WebComponent> components, String name)
+			{
+				if (components == null) return null;
+				for (WebComponent webComponent : components)
+				{
+					if (webComponent.getName().equals(name) && webComponent instanceof WebFormComponent) return (WebFormComponent)webComponent;
+					if (webComponent instanceof Container)
+					{
+						WebFormComponent comp = findWebComponent(((Container)webComponent).getComponents(), name);
+						if (comp != null) return comp;
+					}
+				}
+				return null;
 			}
 		}
 

@@ -221,29 +221,15 @@ public class DesignerFilter implements Filter
 
 	private List<String> getPalleteTypeNames(WebComponentSpecification spec)
 	{
-		ArrayList<String> result = new ArrayList<String>();
-		Map<String, PropertyDescription> properties = spec.getProperties();
-		for (PropertyDescription propertyDescription : properties.values())
+		List<String> result = new ArrayList<String>();
+		for (PropertyDescription propertyDescription : spec.getProperties().values())
 		{
 			Object configObject = propertyDescription.getConfig();
-			if (configObject != null)
+			// RAGTEST config json parsed
+			if (configObject instanceof JSONObject && Boolean.TRUE.equals(((JSONObject)configObject).opt(DROPPABLE)))
 			{
-				try
-				{
-					if (configObject instanceof JSONObject && ((JSONObject)configObject).has(DROPPABLE))
-					{
-						Object droppable = ((JSONObject)configObject).get(DROPPABLE);
-						if (droppable instanceof Boolean && (Boolean)droppable)
-						{
-							String simpleTypeName = propertyDescription.getType().getName().replaceFirst(spec.getName() + ".", "");
-							if (spec.getFoundTypes().containsKey(simpleTypeName)) result.add(simpleTypeName);
-						}
-					}
-				}
-				catch (JSONException e)
-				{
-					Debug.log(e);
-				}
+				String simpleTypeName = propertyDescription.getType().getName().replaceFirst(spec.getName() + ".", "");
+				if (spec.getFoundTypes().containsKey(simpleTypeName)) result.add(simpleTypeName);
 			}
 		}
 		return result;

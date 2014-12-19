@@ -225,7 +225,6 @@ public class DesignerFilter implements Filter
 		for (PropertyDescription propertyDescription : spec.getProperties().values())
 		{
 			Object configObject = propertyDescription.getConfig();
-			// RAGTEST config json parsed
 			if (configObject instanceof JSONObject && Boolean.TRUE.equals(((JSONObject)configObject).opt(DROPPABLE)))
 			{
 				String simpleTypeName = propertyDescription.getType().getName().replaceFirst(spec.getName() + ".", "");

@@ -685,7 +685,7 @@ public class PersistPropertySource implements IPropertySource, IAdaptable, IMode
 		return propertyDescriptor;
 	}
 
-	private Map<Object, PropertyDescriptorWrapper> getBeansProperties()
+	protected Map<Object, PropertyDescriptorWrapper> getBeansProperties()
 	{
 		init();
 		return beansProperties;
@@ -2703,7 +2703,6 @@ public class PersistPropertySource implements IPropertySource, IAdaptable, IMode
 
 		if (propertyType == FoundsetPropertyType.INSTANCE)
 		{
-			// RAGTEST config json
 			return new FoundsetPropertyController(id, displayName, flattenedEditingSolution, persistContext, (JSONObject)propertyDescription.getConfig());
 		}
 

@@ -149,9 +149,12 @@ public class WebComponentPropertySource extends PersistPropertySource
 			}
 		}
 
-		if (propertyDescription instanceof WebComponentSpecification) for (PropertyDescription desc : ((WebComponentSpecification)propertyDescription).getHandlers().values())
+		if (propertyDescription instanceof WebComponentSpecification)
 		{
-			props.add(new WebComponentPropertyHandler(desc));
+			for (PropertyDescription desc : ((WebComponentSpecification)propertyDescription).getHandlers().values())
+			{
+				props.add(new WebComponentPropertyHandler(desc));
+			}
 		}
 
 		return props.toArray(new IPropertyHandler[props.size()]);

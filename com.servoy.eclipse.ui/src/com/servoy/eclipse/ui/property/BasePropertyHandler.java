@@ -133,11 +133,6 @@ public class BasePropertyHandler implements IPropertyHandler
 
 		if (clazz == boolean.class || clazz == Boolean.class)
 		{
-//			if ("enabled".equals(name))
-//			{
-//				// RAGTEST nodig??
-//				return new PropertyDescription(name, EnablePropertyType.INSTANCE);
-//			}
 			return new PropertyDescription(name, BooleanPropertyType.INSTANCE);
 		}
 

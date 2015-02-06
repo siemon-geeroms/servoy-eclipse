@@ -33,11 +33,8 @@ angular.module('editorContent',['servoyApp'])
 				else alert(msg);
 			}
 	}
-	function getURLParameter(name) {
-			return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec($window.location.search)||[,""])[1].replace(/\+/g, '%20'))||null
-	}
 	
-	if (typeof(WebSocket) == 'undefined' || getURLParameter("replacewebsocket")) {
+	if (typeof(WebSocket) == 'undefined' || $webSocket.getURLParameter("replacewebsocket")) {
 		
 		WebSocket = SwtWebSocket;
 		 
@@ -58,7 +55,7 @@ angular.module('editorContent',['servoyApp'])
 		}
 	}
 	 $servoyInternal.connect();
-	 var formName = getURLParameter("f");
+	 var formName = $webSocket.getURLParameter("f");
 	 $scope.getUrl = function() {
 		 if ($webSocket.isConnected()) {
 			 var url = $windowService.getFormUrl(formName);

@@ -61,9 +61,23 @@ public class SwtWebsocket
 {
 	private WebsocketEndpoint websocketEndpoint;
 
-	public SwtWebsocket(Browser browser, String uriString, int id) throws Exception
+	public SwtWebsocket(Browser browser, String uri, int id) throws Exception
 	{
-		Session newSession = new SwtWebSocketSession(browser, id);
+		String[] split = uri.split("\\?", 2);
+		String uriString;
+		String queryString;
+		if (split.length > 0)
+		{
+			uriString = split[0];
+			queryString = split[1];
+		}
+		else
+		{
+			uriString = uri;
+			queryString = null;
+		}
+
+		Session newSession = new SwtWebSocketSession(browser, id, queryString);
 		if (!createAndStartEditorEndpoint(uriString, newSession) && !createAndStartEditorContentEndpoint(uriString, newSession))
 		{
 			throw new IllegalArgumentException("Could not create websocket endpoint for uri '" + uriString + "'");
@@ -75,13 +89,13 @@ public class SwtWebsocket
 		// expecting ws://localhost:8080/rfb/angular/websocket/nnnnnnnn-nnnn-nnnn-nnnn-nnnnnnnnnnnn
 		String[] args = getEndpointArgs(EditorEndpoint.class, uriString);
 
-		if (args == null || args.length != 2)
+		if (args == null || args.length != 1)
 		{
 			return false;
 		}
 
 		websocketEndpoint = new EditorEndpoint();
-		((EditorEndpoint)websocketEndpoint).start(newSession, args[0], args[1]);
+		((EditorEndpoint)websocketEndpoint).start(newSession, args[0]);
 		return true;
 	}
 
@@ -176,9 +190,11 @@ public class SwtWebsocket
 	private static class SwtWebSocketSession implements Session
 	{
 		private final Basic basicRemote;
+		private final String queryString;
 
-		private SwtWebSocketSession(Browser browser, int id)
+		private SwtWebSocketSession(Browser browser, int id, String queryString)
 		{
+			this.queryString = queryString;
 			basicRemote = new SwtWebSocketBasic(browser, id);
 		}
 
@@ -278,7 +294,7 @@ public class SwtWebsocket
 		@Override
 		public String getQueryString()
 		{
-			return null;
+			return queryString;
 		}
 
 		@Override

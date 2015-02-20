@@ -51,7 +51,7 @@ public class EditorEndpoint extends WebsocketEndpoint
 	public void start(Session newSession, @PathParam("editorid")
 	String editorid) throws Exception
 	{
-		super.start(newSession, editorid, null, null, new String[0]);
+		super.start(newSession, editorid, null, null);
 	}
 
 	@Override

@@ -23,6 +23,7 @@ import java.io.Writer;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -61,23 +62,9 @@ public class SwtWebsocket
 {
 	private WebsocketEndpoint websocketEndpoint;
 
-	public SwtWebsocket(Browser browser, String uri, int id) throws Exception
+	public SwtWebsocket(Browser browser, String uriString, int id) throws Exception
 	{
-		String[] split = uri.split("\\?", 2);
-		String uriString;
-		String queryString;
-		if (split.length > 0)
-		{
-			uriString = split[0];
-			queryString = split[1];
-		}
-		else
-		{
-			uriString = uri;
-			queryString = null;
-		}
-
-		Session newSession = new SwtWebSocketSession(browser, id, queryString);
+		Session newSession = new SwtWebSocketSession(browser, uriString, id);
 		if (!createAndStartEditorEndpoint(uriString, newSession) && !createAndStartEditorContentEndpoint(uriString, newSession))
 		{
 			throw new IllegalArgumentException("Could not create websocket endpoint for uri '" + uriString + "'");
@@ -95,22 +82,22 @@ public class SwtWebsocket
 		}
 
 		websocketEndpoint = new EditorEndpoint();
-		((EditorEndpoint)websocketEndpoint).start(newSession, args[0]);
+		((EditorEndpoint)websocketEndpoint).start(newSession, args[0].split("\\?")[0]);
 		return true;
 	}
 
 	private boolean createAndStartEditorContentEndpoint(String uriString, Session newSession) throws Exception
 	{
-		// expecting ws://localhost:8080/rfb/angular/content/websocket/null/null/solname
+		// expecting ws://localhost:8080/rfb/angular/content/websocket/{sessionid}/{windowName}/{windowid}
 		String[] args = getEndpointArgs(EditorContentEndpoint.class, uriString);
 
-		if (args == null || args.length != 4)
+		if (args == null || args.length != 2)
 		{
 			return false;
 		}
 
 		websocketEndpoint = new EditorContentEndpoint();
-		((EditorContentEndpoint)websocketEndpoint).start(newSession, args[0], args[1], args[2], args[3]);
+		((EditorContentEndpoint)websocketEndpoint).start(newSession, args[0], args[1], args[2].split("\\?")[0]);
 		return true;
 	}
 
@@ -190,12 +177,12 @@ public class SwtWebsocket
 	private static class SwtWebSocketSession implements Session
 	{
 		private final Basic basicRemote;
-		private final String queryString;
+		private final String uriString;
 
-		private SwtWebSocketSession(Browser browser, int id, String queryString)
+		private SwtWebSocketSession(Browser browser, String uriString, int id)
 		{
-			this.queryString = queryString;
 			basicRemote = new SwtWebSocketBasic(browser, id);
+			this.uriString = uriString;
 		}
 
 		@Override
@@ -294,12 +281,30 @@ public class SwtWebsocket
 		@Override
 		public String getQueryString()
 		{
-			return queryString;
+			return null;
 		}
 
 		@Override
 		public Map<String, List<String>> getRequestParameterMap()
 		{
+			if (uriString.contains("?"))
+			{
+				Map<String, List<String>> map = new HashMap<String, List<String>>();
+				String[] params = uriString.split("\\?")[1].split("&");
+				for (String param : params)
+				{
+					String[] pair = null;
+					if ((pair = param.split("=")).length > 1)
+					{
+						map.put(pair[0], Arrays.asList(new String[] { pair[1] }));
+					}
+					else
+					{
+						map.put(param, new ArrayList<String>());
+					}
+				}
+				return map;
+			}
 			return null;
 		}
 

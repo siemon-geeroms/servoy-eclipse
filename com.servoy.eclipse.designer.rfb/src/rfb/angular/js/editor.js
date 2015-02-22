@@ -28,7 +28,7 @@ angular.module('editor', ['palette','toolbar','contextmenu','mouseselection',"dr
 	GHOST_TYPE_COMPONENT: "comp",
 	GHOST_TYPE_PART: "part",
 	GHOST_TYPE_FORM: "form"
-}).directive("editor", function( $window, $pluginRegistry,$rootScope,EDITOR_EVENTS,EDITOR_CONSTANTS,$timeout,$editorService), $webSocket{
+}).directive("editor", function($window, $pluginRegistry, $rootScope, EDITOR_EVENTS, EDITOR_CONSTANTS, $timeout, $editorService, $webSocket) {
 	return {
 		restrict: 'E',
 		transclude: true,

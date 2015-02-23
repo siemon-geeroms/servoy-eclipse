@@ -527,7 +527,12 @@ angular.module('editor', ['palette','toolbar','contextmenu','mouseselection',"dr
 						}
 					}
 				}
-				$scope.glasspane.focus();
+				
+				if ($scope.refocusGlasspane)
+				{
+					$scope.glasspane.focus();
+					$scope.refocusGlasspane = false;
+				}
 			}
 			
 			function getScrollSizes(x) {
@@ -946,6 +951,15 @@ angular.module('editor', ['palette','toolbar','contextmenu','mouseselection',"dr
 		{
 			return wsSession.callService('formeditor', 'getShortcuts');
 		},
+		
+		toggleHighlight: function() {
+			if (editorScope.getEditorContentRootScope().highlight == undefined)
+				editorScope.getEditorContentRootScope().highlight = true;
+			else
+				editorScope.getEditorContentRootScope().highlight = !editorScope.getEditorContentRootScope().highlight;
+			
+			editorScope.getEditorContentRootScope().$digest();
+		}
 		// add more service methods here
 	}
 });

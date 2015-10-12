@@ -43,6 +43,7 @@ import com.servoy.eclipse.ui.node.SimpleUserNode;
 import com.servoy.eclipse.ui.property.ComplexProperty;
 import com.servoy.eclipse.ui.property.DimensionPropertySource;
 import com.servoy.eclipse.ui.property.IModelSavePropertySource;
+import com.servoy.eclipse.ui.property.LayoutContainerPropertySource;
 import com.servoy.eclipse.ui.property.MobileListModel;
 import com.servoy.eclipse.ui.property.PDPropertySource;
 import com.servoy.eclipse.ui.property.PersistContext;
@@ -58,6 +59,7 @@ import com.servoy.j2db.persistence.IBasicWebComponent;
 import com.servoy.j2db.persistence.IPersist;
 import com.servoy.j2db.persistence.IRepository;
 import com.servoy.j2db.persistence.IScriptElement;
+import com.servoy.j2db.persistence.LayoutContainer;
 import com.servoy.j2db.persistence.Media;
 import com.servoy.j2db.persistence.Solution;
 import com.servoy.j2db.persistence.SolutionMetaData;
@@ -146,8 +148,8 @@ public class DesignerPropertyAdapterFactory implements IAdapterFactory
 				if (realObject instanceof FormElementGroup && key == IPropertySource.class)
 				{
 					SimpleUserNode formNode = userNode.getAncestorOfType(Form.class);
-					return new RetargetToEditorPersistProperties(createFormElementGroupPropertySource((FormElementGroup)realObject, formNode == null
-						? ((FormElementGroup)obj).getParent() : (Form)formNode.getRealObject()));
+					return new RetargetToEditorPersistProperties(createFormElementGroupPropertySource((FormElementGroup)realObject,
+						formNode == null ? ((FormElementGroup)obj).getParent() : (Form)formNode.getRealObject()));
 				}
 
 				if (realObject instanceof IPersist && !(realObject instanceof Solution) && !(realObject instanceof Style) &&
@@ -300,6 +302,10 @@ public class DesignerPropertyAdapterFactory implements IAdapterFactory
 							: new WebComponentPropertySource(persistContext, false, propertyDescription);
 					}
 				}
+				if (persist instanceof LayoutContainer)
+				{
+					persistProperties = new LayoutContainerPropertySource(persistContext, false);
+				}
 
 				if (persistProperties == null)
 				{
@@ -362,8 +368,8 @@ public class DesignerPropertyAdapterFactory implements IAdapterFactory
 			return null;
 		}
 		// make sure we have the in-memory editing version, the real solution is read-only
-		return new FormElementGroup(group.getGroupID(), servoyProject.getEditingFlattenedSolution(), AbstractRepository.searchPersist(
-			servoyProject.getEditingSolution(), group.getParent()));
+		return new FormElementGroup(group.getGroupID(), servoyProject.getEditingFlattenedSolution(),
+			AbstractRepository.searchPersist(servoyProject.getEditingSolution(), group.getParent()));
 	}
 
 	private static MobileListModel getEditingMobileListModel(MobileListModel model)

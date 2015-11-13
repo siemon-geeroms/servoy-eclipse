@@ -48,6 +48,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -325,20 +326,36 @@ public class SolutionExplorerTreeContentProvider implements IStructuredContentPr
 																																							 */jsunit, plugins };
 		resourceNodes = new PlatformSimpleUserNode[] { stylesNode, userGroupSecurityNode, i18nFilesNode, templatesNode, componentsNode, servicesNode };
 
-		// we want to load the plugins node in a background low prio job so that it will expand fast
-		// when used...
-		Job job = new Job("Background loading of plugins node")
+		//on mac if we run in an non ui job, we can get into a deadlock and the developer hangs
+		if (Platform.getOS().equals(Platform.OS_MACOSX))
 		{
-			@Override
-			protected IStatus run(IProgressMonitor monitor)
+			Display.getDefault().asyncExec(new Runnable()
 			{
-				addPluginsNodeChildren(plugins);
-				return Status.OK_STATUS;
-			}
-		};
-		job.setSystem(true);
-		job.setPriority(Job.LONG);
-		job.schedule();
+
+				@Override
+				public void run()
+				{
+					addPluginsNodeChildren(plugins);
+				}
+			});
+		}
+		else
+		{
+			// we want to load the plugins node in a background low prio job so that it will expand fast
+			// when used...
+			Job job = new Job("Background loading of plugins node")
+			{
+				@Override
+				protected IStatus run(IProgressMonitor monitor)
+				{
+					addPluginsNodeChildren(plugins);
+					return Status.OK_STATUS;
+				}
+			};
+			job.setSystem(false);
+			job.setPriority(Job.DECORATE);
+			job.schedule();
+		}
 
 		com.servoy.eclipse.core.Activator.getDefault().addWebComponentChangedListener(this);
 	}

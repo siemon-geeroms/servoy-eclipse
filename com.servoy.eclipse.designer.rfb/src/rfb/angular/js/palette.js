@@ -193,7 +193,7 @@ angular.module("palette",['ui.bootstrap', 'ui.sortable'])
 							if (canDrop.dropAllowed && !canDrop.beforeChild) {
 								canDrop.beforeChild = angularElement[0].nextElementSibling;
 							}
-							angularElement.remove();
+							//angularElement.remove();
 						}
 						if (!canDrop.dropAllowed) return;
 
@@ -240,7 +240,7 @@ angular.module("palette",['ui.bootstrap', 'ui.sortable'])
 					else {
 						 if (angularElement)
 						 {
-						 	angularElement.remove();
+						 	//angularElement.remove();
 						 }
 					}
 				});

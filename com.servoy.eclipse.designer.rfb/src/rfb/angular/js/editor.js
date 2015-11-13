@@ -1,15 +1,13 @@
 angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouseselection',"dragselection",'inlineedit','decorators','webSocketModule','keyboardlayoutupdater','highlight']).factory("$pluginRegistry",function($rootScope) {
 	var plugins = [];
-
+	var theScopeOfTheEditor = null;
 	return {
 		registerEditor: function(editorScope) {
-			for(var i=0;i<plugins.length;i++) {
-				plugins[i](editorScope);
-			}
+		    theScopeOfTheEditor = editorScope;
 		},
 
 		registerPlugin: function(plugin) {
-			plugins[plugins.length] = plugin;
+			plugin(theScopeOfTheEditor);
 		},
 	}
 }).value("EDITOR_EVENTS", {
@@ -30,7 +28,7 @@ angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouses
 	GHOST_TYPE_PART: "part",
 	GHOST_TYPE_FORM: "form",
 	GHOST_TYPE_INVISIBLE: "invisible"
-}).directive("editor", function($window, $pluginRegistry, $rootScope, EDITOR_EVENTS, EDITOR_CONSTANTS, $timeout, $editorService, $webSocket, $q) {
+}).directive("editor", function($window, $pluginRegistry, $rootScope, EDITOR_EVENTS, EDITOR_CONSTANTS, $timeout, $editorService, $webSocket, $q, $selectionUtils, $inlineedit,$highlight,$keyboardlayoutupdater,$dragselection) {
 	return {
 		restrict: 'E',
 		transclude: true,
@@ -66,7 +64,7 @@ angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouses
 			}
 
 
-			$scope.contentWindow = $element.find('.contentframe')[0].contentWindow;
+//			$scope.contentWindow = $element.find('.contentframe')[0].contentWindow;
 			$scope.glasspane = $element.find('.contentframe-overlay')[0];
 			$scope.editorID = $element.attr('id');
 			$scope.contentDocument = null;
@@ -534,9 +532,9 @@ angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouses
 			}
 
 			$scope.getFormState = function() {
-				var state = servoyInternal.initFormState(formName); // this is a normal direct get if no init config is given
-				if (state) $scope.lastState = state;
-				return $scope.lastState;
+//				var state = servoyInternal.initFormState(formName); // this is a normal direct get if no init config is given
+//				if (state) $scope.lastState = state;
+//				return $scope.lastState;
 			}
 
 			$scope.refreshEditorContent = function() {
@@ -682,75 +680,6 @@ angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouses
 				$scope.setContentSizes();
 			})
 
-			$element.on('documentReady.content', function(event, contentDocument) {
-				
-				if (!$scope.editorInitialized)
-					$pluginRegistry.registerEditor($scope);
-
-				$scope.contentDocument = contentDocument;
-				var htmlTag = $scope.contentDocument.getElementsByTagName("html")[0];
-				var injector = $scope.contentWindow.angular.element(htmlTag).injector();
-				editorContentRootScope = injector.get("$rootScope");
-				servoyInternal = injector.get("$servoyInternal");
-				$scope.glasspane.focus()
-				$(function(){   
-					$(document).keyup(function(objEvent) {					
-						var fixedKeyEvent = $scope.getFixedKeyEvent(objEvent);
-	
-		                // 46 = delete
-						if (fixedKeyEvent.keyCode == 46) {
-							// send the DELETE key code to the server
-							$editorService.keyPressed(objEvent);
-							return false;
-						}
-						return true;
-					});
-					$(document).keydown(function(objEvent) {
-						var fixedKeyEvent = $scope.getFixedKeyEvent(objEvent);
-						
-		                if(fixedKeyEvent.isCtrl)
-		                {
-		                	var k = String.fromCharCode(fixedKeyEvent.keyCode).toLowerCase();
-		                    if ('a' == k || 's' == k || (fixedKeyEvent.isShift && 'z' == k))
-		                    {
-		                    	if(fixedKeyEvent.isShift && ('s' == k || 'z' == k)) {
-									// send the CTRL+SHIFT+S (save all) and CTRL+SHIFT+Z (open editor) key code to the server
-		                    		$editorService.keyPressed(objEvent);
-		                    	}                         
-			                   return false;
-		                    }
-		                }
-		                return true;
-					});
-					
-					$(document).mousedown(function(objEvent) {					
-						$editorService.activated(objEvent);
-						return true;
-					});			
-					
-					$($element.find('.content-area')[0]).on("mousedown", null, function(){
-						$scope.setContentSizes();
-					});
-				});
-				
-				
-				var promise = $editorService.getGhostComponents({"resetPosition":true});
-				promise.then(function (result){
-					$scope.setGhosts(result);
-				});
-				if (!$scope.editorInitialized) {
-					$timeout(function() {					
-						if($scope.isAbsoluteFormLayout()) {
-							$scope.setContentSize(formWidth + "px", formHeight + "px");
-						}
-						else {
-							$scope.setContentSizeFull();
-						}
-					},500);
-				}
-				
-				$scope.editorInitialized = true;
-			});
 			
 			$element.on('renderGhosts.content', function(event) {
 				var promise = $editorService.getGhostComponents();//no parameter, then the ghosts are not repositioned
@@ -823,11 +752,18 @@ angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouses
 					}, 100);
 				}
 			});			
-			
 			$editorService.registerEditor($scope);
+			$pluginRegistry.registerEditor($scope);
+
+			
 			$editorService.connect().then(function() {
+				$scope.editorInitialized = true;
+				$inlineedit.load();
+				$highlight.load();
+				$keyboardlayoutupdater.load();
+				$dragselection.load();
 				var replacews = $webSocket.getURLParameter("replacewebsocket") ? "&replacewebsocket=true" : "";
-				$scope.contentframe = "content/editor-content.html?id=%23" + $element.attr("id") + "&sessionid=" + $webSocket.getURLParameter("c_sessionid")+ "&windowname=" +formName + "&f=" +formName +"&s=" + $webSocket.getURLParameter("s") + replacews;
+				//$scope.contentframe = "content/editor-content.html?id=%23" + $element.attr("id") + "&sessionid=" + $webSocket.getURLParameter("c_sessionid")+ "&windowname=" +formName + "&f=" +formName +"&s=" + $webSocket.getURLParameter("s") + replacews;
 			})
 		},
 		templateUrl: 'templates/editor.html',

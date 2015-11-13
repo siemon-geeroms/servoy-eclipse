@@ -50,8 +50,10 @@ angular.module("toolbar",['toolbaractions','designsize'])
 	      transclude: true,
 	      scope: {
 	      },
-	      controller: function($scope, $element, $attrs, $toolbar) {
+	      controller: function($scope, $element, $attrs, $toolbar,  $toolbaractions, $designsize) {
 	    	  var editor;
+	    	  $toolbaractions.load();
+	    	  $designsize.load();
 	    	  $pluginRegistry.registerPlugin(function(editorScope) {
 	    			editor = editorScope;
 	    			$scope.elements = $toolbar.getButtons(TOOLBAR_CATEGORIES.ELEMENTS);
@@ -70,9 +72,10 @@ angular.module("toolbar",['toolbaractions','designsize'])
 	    			}
 	    			$scope.standard_actions = $toolbar.getButtons(TOOLBAR_CATEGORIES.STANDARD_ACTIONS);
 	    	  });
-	    	  
+	    	
 	    	  $toolbar.registerPanel($scope);
 	      },
+	      
 	      templateUrl: 'templates/toolbar.html',
 	      replace: true
 	    };

@@ -38,6 +38,12 @@ public class EditorWebsocketSession extends BaseWebsocketSession
 	private static final WebComponentSpecification EDITOR_SERVICE_SPECIFICATION = new WebComponentSpecification(EDITOR_SERVICE, "", EDITOR_SERVICE, null, null,
 		null, "", null);
 
+	public static final String EDITOR_CONTENT_SERVICE = "$editorContentService";
+
+	private static final WebComponentSpecification EDITOR_CONTENT_SERVICE_SPECIFICATION = new WebComponentSpecification(EDITOR_CONTENT_SERVICE, "",
+		EDITOR_CONTENT_SERVICE, null, null, null, "", null);
+
+
 	public EditorWebsocketSession(String uuid)
 	{
 		super(uuid);
@@ -68,6 +74,10 @@ public class EditorWebsocketSession extends BaseWebsocketSession
 		if (EDITOR_SERVICE.equals(name))
 		{
 			return new ClientService(name, EDITOR_SERVICE_SPECIFICATION);
+		}
+		if (EDITOR_CONTENT_SERVICE.equals(name))
+		{
+			return new ClientService(EDITOR_CONTENT_SERVICE, EDITOR_CONTENT_SERVICE_SPECIFICATION);
 		}
 		return super.createClientService(name);
 	}

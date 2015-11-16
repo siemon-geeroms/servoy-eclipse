@@ -560,7 +560,7 @@ public class GhostHandler implements IServerService
 			{
 				IFormElement fe = (IFormElement)persist;
 				Point location = fe.getLocation();
-				if ((location.x > editorPart.getForm().getWidth()) || (location.y > formHeight))
+				//if ((location.x > editorPart.getForm().getWidth()) || (location.y > formHeight))
 				{
 					outsideElements.add(fe);
 				}

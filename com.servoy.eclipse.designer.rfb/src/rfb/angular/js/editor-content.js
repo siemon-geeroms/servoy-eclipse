@@ -1,5 +1,7 @@
-angular.module('editorContent',['servoyApp'])
- .controller("MainController", function($scope, $window, $timeout, $windowService, $webSocket, $servoyInternal,$rootScope,$compile,$solutionSettings){
+angular.module('editorContent',[])
+ .controller("ContentController", function($scope, $window, $timeout, $webSocket,$rootScope,$compile,$editorService,$editorContentService){
+     
+     	 $editorService.setEditorContentRootScope($rootScope);
 	 $rootScope.createComponent = function(html,model) {
 			 var compScope = $scope.$new(true);
 			 compScope.model = model;
@@ -10,8 +12,8 @@ angular.module('editorContent',['servoyApp'])
 			 return el;
 		  }
 	$rootScope.highlight = false;
-	$solutionSettings.enableAnchoring = false; 
-	$scope.solutionSettings = $solutionSettings; 
+//	$solutionSettings.enableAnchoring = false; 
+//	$scope.solutionSettings = $solutionSettings; 
 	var realConsole = $window.console;
 	$window.console = {
 			log: function(msg) {
@@ -35,6 +37,12 @@ angular.module('editorContent',['servoyApp'])
 			}
 	}
 	
+	$editorService.connect().then(function() {
+	    $editorContentService.refreshGhosts();
+	});
+	
+	
+	
 	if (typeof(WebSocket) == 'undefined' || $webSocket.getURLParameter("replacewebsocket")=='true') {
 		
 		WebSocket = SwtWebSocket;
@@ -55,24 +63,62 @@ angular.module('editorContent',['servoyApp'])
 			parent.window.SwtWebsocketBrowserFunction('send', str, this.id)
 		}
 	}
-	 $servoyInternal.connect();
-	 var formName = $webSocket.getURLParameter("f");
-	 var high = $webSocket.getURLParameter("highlight");
-	 $scope.getUrl = function() {
-		 if ($webSocket.isConnected()) {
-			 var url = $windowService.getFormUrl(formName);
-			 // this main url is in design (the template must have special markers)
-			 return url?url+"&design=true"+"&highlight="+$rootScope.highlight:null;
-		 }
-	 }
- }).factory("$editorContentService", function() {
+//	 $servoyInternal.connect();
+//	 var formName = $webSocket.getURLParameter("f");
+//	 var high = $webSocket.getURLParameter("highlight");
+//	 $scope.getUrl = function() {
+//		 if ($webSocket.isConnected()) {
+//			 var url = $windowService.getFormUrl(formName);
+//			 // this main url is in design (the template must have special markers)
+//			 return url?url+"&design=true"+"&highlight="+$rootScope.highlight:null;
+//		 }
+//	 }
+ }).factory("$editorContentService", function($editorService, EDITOR_CONSTANTS, EDITOR_EVENTS, $timeout) {
 	 
 	 return  {
 		 refreshDecorators: function() {
-			 renderDecorators();
+		  // TODO this is now in a timeout to let the editor-content be able to reload the form.
+			// could we have an event somewhere from the editor-content that the form is reloaded and ready?
+			// maybe the form controllers code could call $evalAsync as last thing in its controller when it is in design.
+		     var editorScope = $editorService.getEditor();
+		     var selection = editorScope.getSelection();
+		     
+			if (selection.length > 0) {
+				var ghost = editorScope.getGhost(selection[0].getAttribute("svy-id"));
+				if(ghost && (ghost.type === EDITOR_CONSTANTS.GHOST_TYPE_FORM)) {						
+					editorScope.setContentSizes();
+				}
+				else {
+					var promise = $editorService.getGhostComponents();//no parameter, then the ghosts are not repositioned
+					promise.then(function (result){
+						editorScope.setGhosts(result);
+						$timeout(function() {
+							var nodes = Array.prototype.slice.call(editorScope.glasspane.querySelectorAll("[svy-id]"));
+							var matchedElements = []
+							for (var i = 0; i < nodes.length; i++) {
+								var element = nodes[i]
+								matchedElements.push(element);
+							}	
+							selection = matchedElements;
+							if(selection.length != matchedElements.length) {
+							    editorScope.$broadcast(EDITOR_EVENTS.SELECTION_CHANGED,selection);
+							}
+							else {
+							    editorScope.$broadcast(EDITOR_EVENTS.RENDER_DECORATORS, selection);
+							}
+						}, 100);
+					});
+				}
+			}
+			else {
+				editorScope.setContentSizes();
+			}
 		 },
 		 refreshGhosts: function() {
-			 renderGhosts();
+		     var promise = $editorService.getGhostComponents();//no parameter, then the ghosts are not repositioned
+			promise.then(function (result){
+			    $editorService.getEditor().setGhosts(result);
+			});
 		 },
 		 updateForm: function(name, uuid, w, h) {
 			 updateForm({name:name, uuid:uuid, w:w, h:h});

@@ -88,28 +88,31 @@ angular.module('dragselection', [ 'mouseselection' ]).factory('$dragselection', 
 					    posX = node.location.x;
 					    posY = node.location.y;
 					    if (node.type === COMPONENT_TYPE) // this
-										// is a
-										// component,
-										// so
-										// we
-										// have
-										// to
-										// move
-										// it
+						// is a
+						// component,
+						// so
+						// we
+						// have
+						// to
+						// move
+						// it
 						obj[node.uuid] = {
 						    x : node.location.x,
 						    y : node.location.y
 						}
 					} else {
-					    var beanModel = editorScope.getBeanModel(node);
-					    if (beanModel) {
-						beanModel.location.y;
-						beanModel.location.x
-						obj[node.getAttribute("svy-id")] = {
-						    x : beanModel.location.x,
-						    y : beanModel.location.y
-						}
-					    } else {
+					    // var beanModel =
+					    // editorScope.getBeanModel(node);
+					    // if (beanModel) {
+					    // beanModel.location.y;
+					    // beanModel.location.x
+					    // obj[node.getAttribute("svy-id")]
+					    // = {
+					    // x : beanModel.location.x,
+					    // y : beanModel.location.y
+					    // }
+					    // } else
+					    {
 						var ghostObject = editorScope.getGhost(node.getAttribute("svy-id"));
 						if (ghostObject) {
 						    obj[node.getAttribute("svy-id")] = {
@@ -209,41 +212,27 @@ angular.module('dragselection', [ 'mouseselection' ]).factory('$dragselection', 
 				    }
 				}, 200);
 			    } else {
-				var formState = editorScope.getFormState();
-				if (formState) {
-				    var changeX = event.screenX - dragStartEvent.screenX;
-				    var changeY = event.screenY - dragStartEvent.screenY;
-				    for (var i = 0; i < selectionToDrag.length; i++) {
-					var node = selectionToDrag[i];
-					if (node[0] && node[0].getAttribute('cloneuuid')) {
-					    node[0].location.x += changeX;
-					    node[0].location.y += changeY;
-					    var css = {
-						top : node[0].location.y,
-						left : node[0].location.x
-					    }
-					    node.css(css);
-					} else {
-					    var beanModel = editorScope.getBeanModel(node);
-					    if (beanModel) {
-						beanModel.location.y = beanModel.location.y + changeY;
-						beanModel.location.x = beanModel.location.x + changeX;
-						var css = {
-						    top : beanModel.location.y,
-						    left : beanModel.location.x
-						}
-						$(node).css(css);
-					    } else {
-						var ghostObject = editorScope.getGhost(node.getAttribute("svy-id"));
-						if (ghostObject) {
-						    editorScope.updateGhostLocation(ghostObject, ghostObject.location.x + changeX, ghostObject.location.y + changeY)
-						}
-					    }
+				var changeX = event.screenX - dragStartEvent.screenX;
+				var changeY = event.screenY - dragStartEvent.screenY;
+				for (var i = 0; i < selectionToDrag.length; i++) {
+				    var node = selectionToDrag[i];
+				    if (node[0] && node[0].getAttribute('cloneuuid')) {
+					node[0].location.x += changeX;
+					node[0].location.y += changeY;
+					var css = {
+					    top : node[0].location.y,
+					    left : node[0].location.x
+					}
+					node.css(css);
+				    } else {
+					var ghostObject = editorScope.getGhost(node.getAttribute("svy-id"));
+					if (ghostObject) {
+					    editorScope.updateGhostLocation(ghostObject, ghostObject.location.x + changeX, ghostObject.location.y + changeY)
 					}
 				    }
-				    editorScope.refreshEditorContent();
-				    dragStartEvent = event;
 				}
+				editorScope.refreshEditorContent();
+				dragStartEvent = event;
 			    }
 			}
 		    }
@@ -263,29 +252,29 @@ angular.module('dragselection', [ 'mouseselection' ]).factory('$dragselection', 
 		// register event on editor form iframe (see register event in
 		// the editor.js)
 		editorScope.registerDOMEvent("mousedown", "CONTENTFRAME_OVERLAY", onmousedown); // real
-												// selection
-												// in
-												// editor
-												// content
-												// iframe
+		// selection
+		// in
+		// editor
+		// content
+		// iframe
 		editorScope.registerDOMEvent("mouseup", "CONTENTFRAME_OVERLAY", onmouseup); // real
-											    // selection
-											    // in
-											    // editor
-											    // content
-											    // iframe
+		// selection
+		// in
+		// editor
+		// content
+		// iframe
 		editorScope.registerDOMEvent("mousemove", "CONTENTFRAME_OVERLAY", onmousemove); // real
-												// selection
-												// in
-												// editor
-												// content
-												// iframe
+		// selection
+		// in
+		// editor
+		// content
+		// iframe
 		editorScope.registerDOMEvent("mouseleave", "CONTENTFRAME_OVERLAY", onmouseup); // real
-												// selection
-												// in
-												// editor
-												// content
-												// iframe
+		// selection
+		// in
+		// editor
+		// content
+		// iframe
 	    });
 	}
     }

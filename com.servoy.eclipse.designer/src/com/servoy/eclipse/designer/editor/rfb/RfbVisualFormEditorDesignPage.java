@@ -75,7 +75,6 @@ import com.servoy.j2db.server.ngclient.FormElementHelper;
 import com.servoy.j2db.server.ngclient.INGClientWebsocketSession;
 import com.servoy.j2db.server.ngclient.WebsocketSessionFactory;
 import com.servoy.j2db.server.shared.ApplicationServerRegistry;
-import com.servoy.j2db.util.Debug;
 import com.servoy.j2db.util.Utils;
 
 /**
@@ -295,8 +294,8 @@ public class RfbVisualFormEditorDesignPage extends BaseVisualFormEditorDesignPag
 				public void run()
 				{
 					INGClientWebsocketSession editorContentWebsocketSession = getContentWebsocketSession();
-					editorContentWebsocketSession.getEventDispatcher().addEvent(
-						new FormUpdater(editorContentWebsocketSession, null, Arrays.asList(new Form[] { getEditorPart().getForm() })));
+					editorContentWebsocketSession.getEventDispatcher().addEvent(new FormUpdater(RfbVisualFormEditorDesignPage.this.editorWebsocketSession, null,
+						Arrays.asList(new Form[] { getEditorPart().getForm() })));
 				}
 			});
 		}
@@ -320,18 +319,18 @@ public class RfbVisualFormEditorDesignPage extends BaseVisualFormEditorDesignPag
 	{
 		if (persists == null) return;
 		IWindow window = null;
-		final INGClientWebsocketSession editorContentWebsocketSession = (INGClientWebsocketSession)WebsocketSessionManager.getSession(
-			WebsocketSessionFactory.DESIGN_ENDPOINT, CONTENT_SESSION_ID);
-		if (editorContentWebsocketSession != null)
-		{
-			window = editorContentWebsocketSession.getActiveWindow(getEditorPart().getForm().getName());
-		}
-
-		if (window == null)
-		{
-			Debug.warn("Receiving changes for editor without active window");
-			return;
-		}
+//		final INGClientWebsocketSession editorContentWebsocketSession = (INGClientWebsocketSession)WebsocketSessionManager.getSession(
+//			WebsocketSessionFactory.DESIGN_ENDPOINT, CONTENT_SESSION_ID);
+//		if (editorContentWebsocketSession != null)
+//		{
+//			window = editorContentWebsocketSession.getActiveWindow(getEditorPart().getForm().getName());
+//		}
+//
+//		if (window == null)
+//		{
+//			Debug.warn("Receiving changes for editor without active window");
+//			return;
+//		}
 
 		final Map<Form, List<IFormElement>> frms = new HashMap<Form, List<IFormElement>>();
 		final List<Form> changedForms = new ArrayList<Form>();
@@ -417,7 +416,7 @@ public class RfbVisualFormEditorDesignPage extends BaseVisualFormEditorDesignPag
 			{
 				if (frms.size() > 0 || changedForms.size() > 0)
 				{
-					editorContentWebsocketSession.getEventDispatcher().addEvent(new FormUpdater(editorContentWebsocketSession, frms, changedForms));
+					editorWebsocketSession.getEventDispatcher().addEvent(new FormUpdater(editorWebsocketSession, frms, changedForms));
 				}
 				if (fcssFile != null)
 				{
@@ -431,7 +430,8 @@ public class RfbVisualFormEditorDesignPage extends BaseVisualFormEditorDesignPag
 						 * (property.equals(cssFile.getID()) || (Integer)property == 0) websocketSession.getEventDispatcher().addEvent( new
 						 * SendCSSFile(theSolution));
 						 */
-						editorContentWebsocketSession.getEventDispatcher().addEvent(new SendCSSFile(editorContentWebsocketSession, theSolution));
+						//TODO add this back!!!
+						//editorWebsocketSession.getEventDispatcher().addEvent(new SendCSSFile(editorWebsocketSession, theSolution));
 					}
 				}
 			}

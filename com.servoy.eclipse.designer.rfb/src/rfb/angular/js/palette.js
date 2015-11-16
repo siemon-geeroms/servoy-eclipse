@@ -122,29 +122,31 @@ angular.module("palette",['ui.bootstrap', 'ui.sortable'])
 							position: 'absolute',
 							top: event.pageY,
 							left: event.pageX,
-							'z-index': 4,
+							'z-index': 0,
 							'pointer-events': 'none',
 							'list-style-type': 'none'
 						})
 						$('body').append(dragClone);
 						if (type=='component' || type == "layout" || type == "template") {
 							if (type=='component') {
-								angularElement = $scope.getEditorContentRootScope().createComponent('<div style="border-style: dotted;"><'+tagName+' svy-model=\'model\' svy-api=\'api\' svy-handlers=\'handlers\' svy-autoapply-disabled=\'true\'/></div>',model);
+								angularElement = $editorService.getEditorContentRootScope().createComponent('<div style="border-style: dotted;"><'+tagName+' svy-model=\'model\' svy-api=\'api\' svy-handlers=\'handlers\' svy-autoapply-disabled=\'true\'/></div>',model);
 							}
 							else {
 								// tagname is the full element
-								angularElement = $scope.getEditorContentRootScope().createComponent(tagName);
+								angularElement = $editorService.getEditorContentRootScope().createComponent(tagName);
 							}
 							if ($scope.isAbsoluteFormLayout()) {
 								var elWidth = model.size ? model.size.width : 100;
 								var elHeight = model.size ? model.size.height : 100;
+								var t = event.pageY;
+								var l = event.pageX;
 								var css = $scope.convertToContentPoint({
 									position: 'absolute',
-									top: event.pageY,
-									left: event.pageX,
+									top: t,
+									left: l, 
 									width: (elWidth +'px'),
 									height: (elHeight +'px'),
-									'z-index': 4,
+									'z-index': 0,
 									opacity: 0,
 									transition: 'opacity .5s ease-in-out 0'
 								});
@@ -193,7 +195,7 @@ angular.module("palette",['ui.bootstrap', 'ui.sortable'])
 							if (canDrop.dropAllowed && !canDrop.beforeChild) {
 								canDrop.beforeChild = angularElement[0].nextElementSibling;
 							}
-							//angularElement.remove();
+							angularElement.remove();
 						}
 						if (!canDrop.dropAllowed) return;
 
@@ -237,10 +239,11 @@ angular.module("palette",['ui.bootstrap', 'ui.sortable'])
 							$editorService.createComponent(component);
 						}
 					}
-					else {
+					else
+					{
 						 if (angularElement)
 						 {
-						 	//angularElement.remove();
+						 	angularElement.remove();
 						 }
 					}
 				});

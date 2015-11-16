@@ -1,4 +1,4 @@
-angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouseselection',"dragselection",'inlineedit','decorators','webSocketModule','keyboardlayoutupdater','highlight']).factory("$pluginRegistry",function($rootScope) {
+angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouseselection',"dragselection",'inlineedit','decorators','webSocketModule','keyboardlayoutupdater','highlight','editorContent']).factory("$pluginRegistry",function($rootScope) {
 	var plugins = [];
 	var theScopeOfTheEditor = null;
 	return {
@@ -437,26 +437,26 @@ angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouses
 			}
 
 			$scope.convertToContentPoint = function(point){
-				var frameRect = $element.find('.contentframe')[0].getBoundingClientRect()
-				if (point.x && point.y)
-				{
-					point.x = point.x - frameRect.left;
-					point.y = point.y - frameRect.top;
-				} else if (point.top && point.left)
-				{
-					point.left = point.left - frameRect.left;
-					point.top = point.top - frameRect.top;
-				}
+//				var frameRect = $element.find('.contentframe')[0].getBoundingClientRect()
+//				if (point.x && point.y)
+//				{
+//					point.x = point.x - frameRect.left;
+//					point.y = point.y - frameRect.top;
+//				} else if (point.top && point.left)
+//				{
+//					point.left = point.left - frameRect.left;
+//					point.top = point.top - frameRect.top;
+//				}
 				return point
 			}
 
 			$scope.convertToAbsolutePoint = function(point){
-				var frameRect = $element.find('.contentframe')[0].getBoundingClientRect()
-				if (point.x && point.y)
-				{
-					point.x = point.x + frameRect.left;
-					point.y = point.y + frameRect.top;
-				}
+//				var frameRect = $element.find('.contentframe')[0].getBoundingClientRect()
+//				if (point.x && point.y)
+//				{
+//					point.x = point.x + frameRect.left;
+//					point.y = point.y + frameRect.top;
+//				}
 				return point
 			}
 			
@@ -543,9 +543,11 @@ angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouses
 					$rootScope.$broadcast(EDITOR_EVENTS.SELECTION_MOVED,selection)
 				}
 			}
+			
+			
 
 			$scope.getEditorContentRootScope = function() {
-				return editorContentRootScope;
+				$editorService.getEditorContentRootScope();
 			}
 
 			$scope.contentStyle = {position: "absolute", top: "20px", left: "20px", minWidth: "992px", bottom: "0px"};
@@ -627,25 +629,25 @@ angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouses
 			}
 
 			$scope.setContentSizes = function() {
-				var sizes = getScrollSizes($scope.contentDocument.querySelectorAll(".sfcontent"));
-				if (sizes.height > 0 && sizes.width > 0) {
-					var contentDiv = $element.find('.content-area')[0];
-					if (contentDiv.clientHeight < sizes.height && (!$scope.contentStyle.h || $scope.contentStyle.h + 20 < sizes.height || $scope.contentStyle.h - 20 > sizes.height)) {
-						$scope.contentStyle.h = sizes.height
-						if(!$scope.isAbsoluteFormLayout()) {
-							$scope.contentStyle.height = (sizes.height + 20)  +"px"
-						}
-					}
-					if ($scope.isContentSizeFull()) {
-						if (contentDiv.clientWidth < sizes.width && (!$scope.contentStyle.w || $scope.contentStyle.w + 20 < sizes.width || $scope.contentStyle.w - 20 > sizes.width)) {
-								$scope.contentStyle.w = sizes.width
-								if(!$scope.isAbsoluteFormLayout()) {
-									$scope.contentStyle.width = (sizes.width + 20)  +"px"	
-								}
-						}
-					}
-				}
-				adjustGlassPaneSize();
+//				var sizes = getScrollSizes($scope.contentDocument.querySelectorAll(".sfcontent"));
+//				if (sizes.height > 0 && sizes.width > 0) {
+//					var contentDiv = $element.find('.content-area')[0];
+//					if (contentDiv.clientHeight < sizes.height && (!$scope.contentStyle.h || $scope.contentStyle.h + 20 < sizes.height || $scope.contentStyle.h - 20 > sizes.height)) {
+//						$scope.contentStyle.h = sizes.height
+//						if(!$scope.isAbsoluteFormLayout()) {
+//							$scope.contentStyle.height = (sizes.height + 20)  +"px"
+//						}
+//					}
+//					if ($scope.isContentSizeFull()) {
+//						if (contentDiv.clientWidth < sizes.width && (!$scope.contentStyle.w || $scope.contentStyle.w + 20 < sizes.width || $scope.contentStyle.w - 20 > sizes.width)) {
+//								$scope.contentStyle.w = sizes.width
+//								if(!$scope.isAbsoluteFormLayout()) {
+//									$scope.contentStyle.width = (sizes.width + 20)  +"px"	
+//								}
+//						}
+//					}
+//				}
+//				adjustGlassPaneSize();
 			}
 			
 			function adjustGlassPaneSize() {
@@ -681,56 +683,6 @@ angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouses
 			})
 
 			
-			$element.on('renderGhosts.content', function(event) {
-				var promise = $editorService.getGhostComponents();//no parameter, then the ghosts are not repositioned
-				promise.then(function (result){
-					$scope.setGhosts(result);
-				});
-			});
-			
-			$element.on('renderDecorators.content', function(event) {
-				// TODO this is now in a timeout to let the editor-content be able to reload the form.
-				// could we have an event somewhere from the editor-content that the form is reloaded and ready?
-				// maybe the form controllers code could call $evalAsync as last thing in its controller when it is in design.
-				if (selection.length > 0) {
-					var ghost = $scope.getGhost(selection[0].getAttribute("svy-id"));
-					if(ghost && (ghost.type == EDITOR_CONSTANTS.GHOST_TYPE_FORM)) {						
-						$scope.setContentSizes();
-					}
-					else {
-						var promise = $editorService.getGhostComponents();//no parameter, then the ghosts are not repositioned
-						promise.then(function (result){
-							$scope.setGhosts(result);
-							$timeout(function() {
-								var nodes = Array.prototype.slice.call($scope.contentDocument.querySelectorAll("[svy-id]"));
-								var ghosts = Array.prototype.slice.call($scope.glasspane.querySelectorAll("[svy-id]"));
-								nodes = nodes.concat(ghosts);
-								var matchedElements = []
-								for (var i = 0; i < nodes.length; i++) {
-									var element = nodes[i]
-									for(var s=0;s<selection.length;s++) {
-										if (selection[s].getAttribute("svy-id") == element.getAttribute("svy-id")){
-											matchedElements.push(element);
-											break;
-										}
-									}
-								}	
-								selection = matchedElements;
-								if(selection.length != matchedElements.length) {
-									$rootScope.$broadcast(EDITOR_EVENTS.SELECTION_CHANGED,selection);
-								}
-								else {
-									$rootScope.$broadcast(EDITOR_EVENTS.RENDER_DECORATORS, selection);
-								}
-							}, 100);
-						});
-					}
-				}
-				else {
-					$scope.setContentSizes();
-				}
-			});
-
 			$element.on('updateForm.content', function(event, formInfo) {
 				if($scope.isAbsoluteFormLayout()) {
 					if(formName == formInfo.name) {
@@ -761,8 +713,10 @@ angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouses
 				$inlineedit.load();
 				$highlight.load();
 				$keyboardlayoutupdater.load();
+				$selectionUtils.load();
 				$dragselection.load();
-				var replacews = $webSocket.getURLParameter("replacewebsocket") ? "&replacewebsocket=true" : "";
+				
+//				var replacews = $webSocket.getURLParameter("replacewebsocket") ? "&replacewebsocket=true" : "";
 				//$scope.contentframe = "content/editor-content.html?id=%23" + $element.attr("id") + "&sessionid=" + $webSocket.getURLParameter("c_sessionid")+ "&windowname=" +formName + "&f=" +formName +"&s=" + $webSocket.getURLParameter("s") + replacews;
 			})
 		},
@@ -859,6 +813,28 @@ angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouses
 			deferred = null;
 			$rootScope.$broadcast(EDITOR_EVENTS.INITIALIZED)
 		});
+		
+//		wsSession.onmessage = function(message) {
+//			var obj = JSON.parse(message.data);
+//			console.log(o)
+//			if (obj.services) {
+//				// services call
+//				if (obj.conversions && obj.conversions.services) {
+//					obj.services = $sabloConverters.convertFromServerToClient(obj.services, obj.conversions.services, undefined, undefined, undefined)
+//				}
+//				for (var index in obj.services) {
+//					var service = obj.services[index];
+//					var serviceInstance = $injector.get(service.name);
+//					if (serviceInstance
+//							&& serviceInstance[service.call]) {
+//						// responseValue keeps last services call return value
+//						responseValue = serviceInstance[service.call].apply(serviceInstance, service.args);
+//						$services.digest(service.name);
+//					}
+//				}
+//			}
+//		}
+		
 	}
 
 	$rootScope.$on(EDITOR_EVENTS.SELECTION_CHANGED, function(event, selection) {
@@ -869,7 +845,15 @@ angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouses
 		wsSession.callService('formeditor', 'setSelection', {selection: sel}, true)
 	})
 	var editorScope; //todo this should become a array if we want to support multiply editors on 1 html page.
+	var editorContentRootScope
 	return {
+	    
+	    	setEditorContentRootScope: function(ecrs) {
+	    	    editorContentRootScope = ecrs;
+	    	},
+	    	getEditorContentRootScope: function(ecrs) {
+	    	    return editorContentRootScope;
+	    	},
 		registerEditor: function(scope) {
 			editorScope = scope;
 		},
@@ -984,9 +968,9 @@ angular.module('editor', ['mc.resizer','palette','toolbar','contextmenu','mouses
 				var changed = false;
 				var selection = [];
 				if (ids && ids.length > 0) {
-					var nodes = Array.prototype.slice.call(editorScope.contentDocument.querySelectorAll("[svy-id]"));
-					var ghosts = Array.prototype.slice.call(editorScope.glasspane.querySelectorAll("[svy-id]"));
-					nodes = nodes.concat(ghosts);
+//					var nodes = Array.prototype.slice.call(editorScope.contentDocument.querySelectorAll("[svy-id]"));
+					var nodes = Array.prototype.slice.call(editorScope.glasspane.querySelectorAll("[svy-id]"));
+//					nodes = nodes.concat(ghosts);
 					for(var i=0;i<nodes.length;i++) {
 						var id = nodes[i].getAttribute("svy-id");
 						if (ids.indexOf(id) != -1) {

@@ -63,15 +63,7 @@ angular.module('mouseselection', [ 'editor' ])
 						return null;
 					    var allowedChildren = dt[0].getAttribute("svy-allowed-children");
 					    if (!allowedChildren || !(allowedChildren.indexOf(realName) > 0)) {
-						return getParent($(dt).parent("[svy-id]")); // the
-											    // drop
-											    // target
-											    // doesn't
-											    // allow
-											    // this
-											    // layout
-											    // container
-											    // type
+						return getParent($(dt).parent("[svy-id]")); // the drop target doesn't allow this layout container type
 					    }
 					    return dt;
 					}
@@ -118,13 +110,13 @@ angular.module('mouseselection', [ 'editor' ])
 					    return {
 						dropAllowed : false
 					    }; // the drop target doesn't
-						// suppor this type
+					// suppor this type
 				    } else
 					return {
 					    dropAllowed : false
 					}; // ghost has no drop target or the
-					    // drop target doesnt support any
-					    // types
+				    // drop target doesnt support any
+				    // types
 				} else {
 				    dropTarget = this.getNode(event, true);
 				    if (componentName !== undefined && dropTarget && dropTarget.getAttribute("svy-forbidden-components")) {
@@ -132,7 +124,7 @@ angular.module('mouseselection', [ 'editor' ])
 					    return {
 						dropAllowed : false
 					    }; // the drop target doesn't
-						// suppor this component
+					// suppor this component
 				    }
 				}
 				return {
@@ -264,10 +256,10 @@ angular.module('mouseselection', [ 'editor' ])
 				    }
 
 				    if (percentage == undefined || percentage == 100) { // Element
-											// must
-											// be
-											// fully
-											// enclosed
+					// must
+					// be
+					// fully
+					// enclosed
 					if (p1.top <= top && p1.left <= left && p2.top >= top + clientHeight && p2.left >= left + clientWidth) {
 					    matchedElements.push(element)
 					}
@@ -296,8 +288,8 @@ angular.module('mouseselection', [ 'editor' ])
 				}
 				var nodes = [];
 				var ghosts = [];
-				if (fromDoc)
-				    nodes = Array.prototype.slice.call(editorScope.contentDocument.querySelectorAll("[svy-id]"));
+				//				if (fromDoc)
+				//				    nodes = Array.prototype.slice.call(editorScope.contentDocument.querySelectorAll("[svy-id]"));
 
 				if (fromGlass)
 				    ghosts = Array.prototype.slice.call(editorScope.glasspane.querySelectorAll("[svy-id]"));

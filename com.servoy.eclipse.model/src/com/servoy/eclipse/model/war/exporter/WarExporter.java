@@ -179,6 +179,9 @@ public class WarExporter
 			copyActiveSolution(subMonitor.newChild(2), tmpWarDir);
 		}
 		subMonitor.worked(1);
+		subMonitor.subTask("Create properties for default admin page");
+		createAdminProperties(subMonitor, tmpWarDir);
+		subMonitor.worked(1);
 		subMonitor.subTask("Copy NGClient components");
 		copyComponents(subMonitor, tmpWarDir, targetLibDir);
 		subMonitor.worked(1);
@@ -661,7 +664,14 @@ public class WarExporter
 		{
 			ServoyLog.logError(e);
 		}
+	}
 
+	/**
+	 * @param tmpWarDir
+	 * @param monitor
+	 */
+	protected void createAdminProperties(IProgressMonitor monitor, File tmpWarDir)
+	{
 		if (exportModel.getDefaultAdminUser() != null && exportModel.getDefaultAdminPassword() != null)
 		{
 			try

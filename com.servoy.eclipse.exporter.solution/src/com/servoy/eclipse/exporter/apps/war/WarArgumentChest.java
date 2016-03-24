@@ -185,8 +185,11 @@ public class WarArgumentChest extends AbstractArgumentChest
 		if (argsMap.containsKey("tables")) exportAllTablesFromReferencedServers = true;
 		if (argsMap.containsKey("warFileName")) warFileName = parseArg("warFileName", null, argsMap, false);
 
-		parseArg("defaultAdminUser", "Parameters'-defaultAdminUser' and '-defaultAdminPassword' are required.", argsMap, true);
-		parseArg("defaultAdminPassword", "Parameters'-defaultAdminUser' and '-defaultAdminPassword' are required.", argsMap, true);
+		// check required args
+		if (parseArg(defaultAdminUser, "Parameters '-defaultAdminUser' and '-defaultAdminPassword' are required.", argsMap, true) != null)
+		{
+			parseArg(defaultAdminPassword, "Parameters '-defaultAdminUser' and '-defaultAdminPassword' are required.", argsMap, true);
+		}
 
 		argumentsMap = argsMap;
 	}
